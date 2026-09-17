@@ -1,0 +1,11 @@
+{
+  "name": "@wanderloom/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test",
+    "build": "tsc -p tsconfig.json"
+  }
+}
