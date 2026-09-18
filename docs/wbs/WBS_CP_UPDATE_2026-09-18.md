@@ -9,6 +9,11 @@ Workspace install, typecheck, test command, and build succeeded. The test
 runner currently discovers zero tests; behavioral coverage is pending.
 See [A-001 validation](A-001_VALIDATION_2026-09-18.md) for environment and scope.
 
+A-002 tooling validation is now complete locally: pinned tool versions,
+installation, typecheck, three workspace smoke tests, and build pass.
+See [A-002 validation](A-002_VALIDATION_2026-09-18.md). The lint portion of
+W0-002 remains pending.
+
 ## 2. Reflected design decisions
 
 The WBS/CP now assumes:
