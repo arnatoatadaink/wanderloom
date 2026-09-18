@@ -4,6 +4,11 @@
 
 Design phase checkpoint reached. The project moves from design into implementation specification.
 
+Implementation update (2026-09-18): A-001 / W0-001 / CP-01 completed locally.
+Workspace install, typecheck, test command, and build succeeded. The test
+runner currently discovers zero tests; behavioral coverage is pending.
+See [A-001 validation](A-001_VALIDATION_2026-09-18.md) for environment and scope.
+
 ## 2. Reflected design decisions
 
 The WBS/CP now assumes:
@@ -28,7 +33,7 @@ The WBS/CP now assumes:
 ## 3. Workstreams
 
 ### W0 Project Foundation
-- W0-001 Workspace initialization
+- W0-001 Workspace initialization — complete (local validation)
 - W0-002 TypeScript / lint / test baseline
 - W0-003 Documentation structure
 - W0-004 ADR baseline
@@ -139,7 +144,6 @@ M1 Playable Solo Prototype
 ## 5. CP blockers
 
 ### Hard blockers
-- Workspace not initialized
 - Domain/snapshot type mismatch
 - D1 migration unavailable
 - Atomic claim not proven
