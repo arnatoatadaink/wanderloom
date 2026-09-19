@@ -1,6 +1,9 @@
-# B-001 through B-004 Domain Contracts — 2026-09-18
+# B-001 through B-005 Domain Contracts — 2026-09-19
 
-Status: implemented on `feat/b-001-b-004-domain-contracts`; local validation pending.
+Status: implementation and local validation complete on `feat/b-001-b-004-domain-contracts`.
+
+> Historical note: this file name predates B-005. The branch was extended in place
+> with B-005 so the full Batch B contract set remains reviewable as one change set.
 
 ## Scope
 
@@ -11,6 +14,7 @@ Implemented the domain contracts requested by
 - B-002 Core Snapshot
 - B-003 Inventory Snapshot
 - B-004 Archive Entry
+- B-005 Mutation results/errors
 
 ## Decisions encoded
 
@@ -39,8 +43,8 @@ serialization.
 - optional active exploration
 - update timestamp
 
-`ActiveExploration` carries the already accepted server-authoritative timing,
-seed, claim nonce, zone, duration identifier, and character snapshot.
+`ActiveExploration` carries the accepted server-authoritative timing, seed,
+claim nonce, zone, duration identifier, and character snapshot.
 
 ### Character stats
 
@@ -61,13 +65,29 @@ instance and definition IDs.
 
 ### Archive
 
-`ExplorationArchiveEntry` records exploration identity/timing, result,
-reward summary, numeric summary metrics, and sync state.
+`ExplorationArchiveEntry` records exploration identity/timing, result, reward
+summary, numeric summary metrics, and sync state.
 
 `ArchiveSyncState` is explicitly `pending` or `synced`; `syncedAt` is only
-present as a timestamp in the synced state. This keeps Google appDataFolder sync
-outside the atomic claim transaction while retaining the D1 recent-archive
-buffer contract.
+a timestamp in the synced state. This keeps Google appDataFolder sync outside
+the atomic claim transaction while retaining the D1 recent-archive buffer
+contract.
+
+### Mutation results and errors
+
+`MutationResult<Value, Error>` is a discriminated success/failure union. The
+stable mutation-error codes are:
+
+- `version_conflict` — `VersionConflict`
+- `already_claimed` — `AlreadyClaimed`
+- `invalid_exploration_state` — `InvalidExplorationState`
+- `snapshot_integrity_error` — `SnapshotIntegrityError`
+
+`InvalidExplorationState` deliberately keeps state names as strings until the
+E-001 exploration state machine owns that vocabulary.
+
+`SnapshotKind` currently covers `core` and `inventory`. Whether archive
+integrity uses this same error contract is deferred to C-004.
 
 ## Deferred by design
 
@@ -77,19 +97,16 @@ The following are not fixed here because they belong to later batches:
 - equipment slot vocabulary
 - exploration result/outcome vocabulary
 - serialization/parsing and schema migration behavior (C-003)
-- integrity/range validation (C-004)
-- mutation result/error types (B-005)
+- integrity/range validation implementation (C-004)
 - exploration state-machine implementation (E-001)
 
-## Validation target
+## Validation
 
-Run:
+Validated locally with project-pinned pnpm 10.17.1:
 
-```text
-pnpm typecheck
-pnpm test
-pnpm build
-```
+- `pnpm typecheck` — PASS
+- `pnpm test` — PASS, 5 tests
+- `pnpm build` — PASS
+- `git diff --check` — PASS
 
-The added smoke test constructs compatible core, inventory, and archive
-snapshots so TypeScript validates the contracts together.
+No deployment is required for Batch B.
