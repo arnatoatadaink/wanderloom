@@ -14,6 +14,12 @@ installation, typecheck, three workspace smoke tests, and build pass.
 See [A-002 validation](A-002_VALIDATION_2026-09-18.md). The lint portion of
 W0-002 remains pending.
 
+
+Batch B domain contracts (B-001 through B-005) are complete and locally
+validated. This fixes the shared domain and snapshot contract boundary required
+by CP-02 and CP-03. The next critical-path implementation target is CP-04:
+D1 schema + migration.
+
 ## 2. Reflected design decisions
 
 The WBS/CP now assumes:
@@ -119,9 +125,9 @@ The WBS/CP now assumes:
 ```text
 CP-01 Workspace initialized
 ↓
-CP-02 Domain types fixed
+CP-02 Domain types fixed — complete
 ↓
-CP-03 Snapshot types fixed
+CP-03 Snapshot types fixed — complete
 ↓
 CP-04 D1 schema + migration
 ↓
