@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-09-atomic-claim-mutation`. Workspace-level WSL validation is pending.
+Implementation and WSL workspace validation complete on `feat/cp-09-atomic-claim-mutation`.
 
 ## Scope
 
@@ -64,4 +64,17 @@ pnpm build
 git diff --check
 ```
 
-After these pass, CP-09 can be closed and the next critical-path target is CP-10: Guest bootstrap + API wiring.
+Validation summary:
+
+- workspace typecheck: passed for `packages/game-core`, `apps/web`, and `workers/api`
+- workspace tests: passed
+  - `packages/game-core`: 16 tests across 7 files
+  - `apps/web`: 1 test
+  - `workers/api`: 6 tests across 3 files, including 3 atomic-claim tests
+- workspace build: passed
+  - `game-core` TypeScript build
+  - Vite production build
+  - Wrangler dry-run build with `env.DB` D1 binding
+- `git diff --check`: passed
+
+CP-09 is complete. The next critical-path target is CP-10: Guest bootstrap + API wiring.
