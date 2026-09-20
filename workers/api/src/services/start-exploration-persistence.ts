@@ -34,13 +34,18 @@ export async function persistStartedExploration(
   );
 
   if (!updated) {
+    const latest = await repository.findByPlayerId(input.player.playerId);
+    if (latest === null) {
+      throw new Error("core snapshot disappeared during optimistic update");
+    }
+
     return {
       ok: false,
       error: {
         code: "version_conflict",
         snapshot: "core",
         expectedVersion: created.value.previousStateVersion,
-        actualVersion: created.value.previousStateVersion + 1
+        actualVersion: latest.stateVersion
       }
     };
   }
