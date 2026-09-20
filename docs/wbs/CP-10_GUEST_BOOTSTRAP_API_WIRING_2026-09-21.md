@@ -1,0 +1,83 @@
+# CP-10 Guest Bootstrap + API Wiring — Implementation Note
+
+## Status
+
+Core API wiring is implemented on `feat/cp-10-guest-bootstrap-api-wiring`. Workspace-level WSL validation is pending.
+
+CP-10 is not yet closed because server-side game-rule providers remain unresolved for the zone catalog, duration resolution, exploration resolution, and recent-archive retention policy.
+
+## Implemented HTTP surface
+
+Implemented and directly functional:
+
+- `GET /api/health`
+- `POST /api/guest/bootstrap`
+- `GET /api/state`
+- `GET /api/inventory`
+- `GET /api/explorations/current`
+
+Player-scoped routes use the temporary M1 guest transport header:
+
+`x-wanderloom-player-id`
+
+The bootstrap endpoint creates the player root, core snapshot, and inventory snapshot in one D1 batch and returns the generated guest player ID.
+
+## Start / claim wiring
+
+The following routes are structurally wired to the existing domain and persistence layers:
+
+- `POST /api/explorations`
+- `POST /api/explorations/:id/claim`
+
+Start accepts only action inputs (`zoneId`, `durationId`). Duration in milliseconds is resolved server-side through `resolveDurationMs`; the client does not provide authoritative timestamps, snapshots, seed, nonce, or duration milliseconds.
+
+Claim reads authoritative core/inventory snapshots, requests a server-side `ExplorationResolution`, runs `calculateClaim`, then commits through `D1AtomicMutationRepository`.
+
+No reward/result snapshot is accepted from the client.
+
+## Deliberately unresolved providers
+
+The default Worker runtime returns `not_ready` until these server-side policies are provided:
+
+- zone catalog
+- zone + duration -> authoritative duration resolution
+- exploration -> `ExplorationResolution`
+- recent archive retention count
+- equipment mutation
+
+This preserves the existing WBS decision not to invent balance values or prematurely choose 1/3/5 archive retention.
+
+## Guest bootstrap baseline
+
+The technical bootstrap state is intentionally minimal:
+
+- schema version 1
+- state version 0
+- level 1
+- EXP 0
+- Gold 0
+- empty character stats
+- empty inventory/equipment/stackables
+
+No game-balance bonuses or starting equipment are introduced.
+
+## Added persistence/API components
+
+- `D1InventorySnapshotRepository`
+- `bootstrapGuestPlayer`
+- `createApi`
+- Worker routing through `createApi`
+- API tests for health, bootstrap, identity requirement, and unresolved game-data route behavior
+
+## Validation target
+
+Run in WSL:
+
+```bash
+pnpm typecheck
+pnpm test
+pnpm build
+git diff --check
+```
+
+After validation, the next CP-10 subtask is to supply the server-side rule providers required for zones/start/claim. CP-10 should be closed only after those routes can run without `not_ready` for the M1 loop.
