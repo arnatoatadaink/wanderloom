@@ -5,20 +5,13 @@ import {
   type PlayerId,
   type ZoneId
 } from "@wanderloom/game-core";
-import { D1AtomicMutationRepository } from "./persistence/d1-atomic-mutation-repository";
+import { D1AtomicMutationRepository, type D1AtomicDatabaseLike } from "./persistence/d1-atomic-mutation-repository";
 import { D1CoreSnapshotRepository, type D1DatabaseLike } from "./persistence/d1-core-snapshot-repository";
 import { D1InventorySnapshotRepository } from "./persistence/d1-inventory-snapshot-repository";
 import { bootstrapGuestPlayer } from "./services/guest-bootstrap";
 import { persistStartedExploration } from "./services/start-exploration-persistence";
 
-interface D1PreparedStatementLike {
-  bind(...values: unknown[]): D1PreparedStatementLike;
-}
-
-export interface ApiDatabase extends D1DatabaseLike {
-  prepare(query: string): D1PreparedStatementLike & ReturnType<D1DatabaseLike["prepare"]>;
-  batch(statements: D1PreparedStatementLike[]): Promise<readonly unknown[]>;
-}
+export type ApiDatabase = D1DatabaseLike & D1AtomicDatabaseLike;
 
 export interface ApiEnv {
   readonly DB: ApiDatabase;
