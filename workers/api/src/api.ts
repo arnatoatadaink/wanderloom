@@ -30,6 +30,7 @@ export interface ApiRuntime {
   readonly resolveExploration: (
     explorationId: ExplorationId
   ) => ExplorationResolution | null;
+  readonly recentArchiveRetention: number | null;
 }
 
 const defaultRuntime: ApiRuntime = {
@@ -39,7 +40,8 @@ const defaultRuntime: ApiRuntime = {
   createClaimNonce: () => crypto.randomUUID(),
   createSeed: () => crypto.randomUUID(),
   resolveDurationMs: () => null,
-  resolveExploration: () => null
+  resolveExploration: () => null,
+  recentArchiveRetention: null
 };
 
 function json(body: unknown, status = 200): Response {
@@ -227,8 +229,12 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           );
         }
 
+        if (runtime.recentArchiveRetention === null) {
+          return notReady("recent_archive_retention_policy");
+        }
+
         const atomicRepository = new D1AtomicMutationRepository(env.DB, {
-          recentArchiveRetention: 3
+          recentArchiveRetention: runtime.recentArchiveRetention
         });
         const committed = await atomicRepository.commit({
           kind: "claim",
