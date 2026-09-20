@@ -1,3 +1,6 @@
 node_modules/
+# Also ignore WSL dependency symlinks used from the Windows working tree.
+node_modules
 .pnpm-store/
 dist/
+trash/
