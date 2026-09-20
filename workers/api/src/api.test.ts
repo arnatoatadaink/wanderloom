@@ -49,7 +49,8 @@ describe("CP-10 API wiring", () => {
       createClaimNonce: () => "nonce-test",
       createSeed: () => "seed-test",
       resolveDurationMs: () => null,
-      resolveExploration: () => null
+      resolveExploration: () => null,
+      recentArchiveRetention: null
     });
 
     const response = await api.fetch(
