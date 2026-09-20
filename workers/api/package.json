@@ -13,5 +13,8 @@
     "@cloudflare/vitest-plugin": "1.1.12",
     "vitest": "4.1.11",
     "wrangler": "4.132.0"
+  },
+  "dependencies": {
+    "@wanderloom/game-core": "workspace:*"
   }
 }
