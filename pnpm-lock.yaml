@@ -28,6 +28,10 @@ importers:
         version: 4.1.11(vite@8.2.2(esbuild@0.28.1))
 
   workers/api:
+    dependencies:
+      '@wanderloom/game-core':
+        specifier: workspace:*
+        version: link:../../packages/game-core
     devDependencies:
       '@cloudflare/vitest-plugin':
         specifier: 1.1.12
