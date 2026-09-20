@@ -23,7 +23,7 @@ C-001 / W2-011 / CP-04 is complete on `feat/c-001-d1-migration`.
 The migration was applied successfully with Wrangler local D1 on WSL2; all five
 tables, three explicit indexes, and required constraints were verified. See
 [C-001 D1 migration implementation](C-001_D1_MIGRATION_2026-09-20.md).
-C-002 / W2-012 / CP-05 repository-interface implementation is complete on `feat/c-002-repository-interfaces`. The interfaces remain storage-agnostic and are defined against the fixed Batch B domain contracts; D1 implementation details stay in the Worker layer. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`. CP-05 is closed. See [C-002 repository interfaces](C-002_REPOSITORY_INTERFACES_2026-09-20.md). The next critical-path target is CP-06: exploration state machine.
+C-002 / W2-012 / CP-05 repository-interface implementation is complete on `feat/c-002-repository-interfaces`. The interfaces remain storage-agnostic and are defined against the fixed Batch B domain contracts; D1 implementation details stay in the Worker layer. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`. CP-05 is closed. See [C-002 repository interfaces](C-002_REPOSITORY_INTERFACES_2026-09-20.md). E-001 / W1-002 / CP-06 exploration-state-machine implementation is complete on `feat/e-001-exploration-state-machine`; WSL validation is pending. See [E-001 exploration state machine](E-001_EXPLORATION_STATE_MACHINE_2026-09-20.md).
 
 ## 2. Reflected design decisions
 
@@ -56,7 +56,7 @@ The WBS/CP now assumes:
 
 ### W1 Game Core
 - W1-001 Domain types
-- W1-002 Exploration state machine
+- W1-002 Exploration state machine — implementation complete; WSL validation pending
 - W1-003 Risk/reward interfaces
 - W1-004 Seeded resolution
 - W1-005 Failure/drop-loss model
@@ -138,7 +138,7 @@ CP-04 D1 schema + migration — complete
 ↓
 CP-05 Repository interfaces — complete
 ↓
-CP-06 Exploration state machine
+CP-06 Exploration state machine — implementation complete; validation pending
 ↓
 CP-07 Start exploration persistence
 ↓
