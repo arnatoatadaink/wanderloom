@@ -1,4 +1,5 @@
 export * from "./domain/archive";
+export * from "./domain/claim-calculation";
 export * from "./domain/core-snapshot";
 export * from "./domain/exploration-state";
 export * from "./domain/ids";
