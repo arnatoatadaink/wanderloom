@@ -44,7 +44,12 @@ describe("CP-10 API wiring", () => {
   it("bootstraps a guest with deterministic runtime inputs", async () => {
     const api = createApi({
       now: () => "2026-09-21T00:00:00.000Z",
-      createPlayerId: () => "player-test" as PlayerId
+      createPlayerId: () => "player-test" as PlayerId,
+      createExplorationId: () => "exploration-test" as never,
+      createClaimNonce: () => "nonce-test",
+      createSeed: () => "seed-test",
+      resolveDurationMs: () => null,
+      resolveExploration: () => null
     });
 
     const response = await api.fetch(
