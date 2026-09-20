@@ -5,5 +5,6 @@ export * from "./domain/ids";
 export * from "./domain/inventory-snapshot";
 export * from "./domain/mutation-result";
 export * from "./domain/repositories";
+export * from "./domain/start-exploration";
 
 export const GAME_CORE_WORKSPACE_READY = true;
