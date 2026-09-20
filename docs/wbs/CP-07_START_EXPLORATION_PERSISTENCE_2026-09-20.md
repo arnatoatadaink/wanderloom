@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-07-start-exploration-persistence`. Workspace-level WSL validation is pending.
+Implementation complete on `feat/cp-07-start-exploration-persistence`. Initial WSL validation found a TypeScript 7 test-only control-flow narrowing error in `start-exploration-persistence.test.ts`; runtime tests and builds passed. The test assertion pattern was corrected in commit `90db97b`. Re-validation is pending.
 
 ## Scope
 
