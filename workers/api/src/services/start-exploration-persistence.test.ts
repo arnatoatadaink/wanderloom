@@ -23,8 +23,10 @@ function makePlayer(): PlayerCoreSnapshot {
 
 describe("CP-07 start exploration persistence", () => {
   it("persists the started exploration with optimistic locking", async () => {
-    let persisted: PlayerCoreSnapshot | null = null;
-    let expectedVersion: number | null = null;
+    const observed: {
+      persisted?: PlayerCoreSnapshot;
+      expectedVersion?: number;
+    } = {};
 
     const repository: CoreSnapshotRepository = {
       async findByPlayerId() {
@@ -32,8 +34,8 @@ describe("CP-07 start exploration persistence", () => {
       },
       async insert() {},
       async updateIfVersionMatches(snapshot, expected) {
-        persisted = snapshot;
-        expectedVersion = expected;
+        observed.persisted = snapshot;
+        observed.expectedVersion = expected;
         return true;
       }
     };
@@ -50,9 +52,11 @@ describe("CP-07 start exploration persistence", () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(expectedVersion).toBe(2);
-    expect(persisted?.stateVersion).toBe(3);
-    expect(persisted?.activeExploration?.explorationId).toBe("exploration-1");
+    expect(observed.expectedVersion).toBe(2);
+    expect(observed.persisted?.stateVersion).toBe(3);
+    expect(observed.persisted?.activeExploration?.explorationId).toBe(
+      "exploration-1"
+    );
   });
 
   it("returns version_conflict when the CAS update loses", async () => {
