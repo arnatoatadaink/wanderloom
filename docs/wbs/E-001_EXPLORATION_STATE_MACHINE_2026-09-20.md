@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/e-001-exploration-state-machine`. Workspace-level WSL validation is pending.
+Implementation and WSL workspace validation complete on `feat/e-001-exploration-state-machine`.
 
 ## Scope
 
@@ -44,13 +44,17 @@ Added:
 - exploring derivation before the end time
 - ready-to-claim derivation at and after the end time
 
-Run in WSL:
+WSL validation completed successfully:
 
-```bash
-pnpm typecheck
-pnpm test
-pnpm build
-git diff --check
-```
+- workspace typecheck: passed for `workers/api`, `packages/game-core`, and `apps/web`
+- workspace tests: passed
+  - `workers/api`: 1 test
+  - `apps/web`: 1 test
+  - `packages/game-core`: 11 tests across 5 files, including 5 exploration-state tests
+- workspace build: passed
+  - Vite production build
+  - `game-core` TypeScript build
+  - Wrangler dry-run build with `env.DB` D1 binding
+- `git diff --check`: passed with no diff issues
 
-Once these pass, E-001 / W1-002 / CP-06 can be closed. The next critical-path target is CP-07: start exploration persistence.
+E-001 / W1-002 / CP-06 is complete. The next critical-path target is CP-07: start exploration persistence.
