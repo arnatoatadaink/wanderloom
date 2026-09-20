@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-08-claim-calculation`. Workspace-level WSL validation is pending.
+Implementation and WSL workspace validation complete on `feat/cp-08-claim-calculation`.
 
 ## Scope
 
@@ -55,4 +55,17 @@ pnpm build
 git diff --check
 ```
 
-Once these pass, CP-08 can be closed. The next critical-path target is CP-09: Atomic Level-3 claim mutation.
+Validation summary:
+
+- workspace typecheck: passed for `packages/game-core`, `apps/web`, and `workers/api`
+- workspace tests: passed
+  - `packages/game-core`: 16 tests across 7 files, including 3 claim-calculation tests
+  - `apps/web`: 1 test
+  - `workers/api`: 3 tests
+- workspace build: passed
+  - `game-core` TypeScript build
+  - Vite production build
+  - Wrangler dry-run build with `env.DB` D1 binding
+- `git diff --check`: passed
+
+CP-08 is complete. The next critical-path target is CP-09: Atomic Level-3 claim mutation.
