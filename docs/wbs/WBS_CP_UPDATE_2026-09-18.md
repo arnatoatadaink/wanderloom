@@ -17,13 +17,13 @@ W0-002 remains pending.
 
 Batch B domain contracts (B-001 through B-005) are complete and locally
 validated. This fixes the shared domain and snapshot contract boundary required
-by CP-02 and CP-03. The next critical-path implementation target is CP-04:
-D1 schema + migration.
+by CP-02 and CP-03.
 
-C-001 / W2-011 migration SQL is now implemented on `feat/c-001-d1-migration`.
-SQLite-level schema/constraint validation passes. CP-04 remains open until the
-migration is applied successfully with Wrangler against local D1. See
+C-001 / W2-011 / CP-04 is complete on `feat/c-001-d1-migration`.
+The migration was applied successfully with Wrangler local D1 on WSL2; all five
+tables, three explicit indexes, and required constraints were verified. See
 [C-001 D1 migration implementation](C-001_D1_MIGRATION_2026-09-20.md).
+The next critical-path implementation target is CP-05: repository interfaces.
 
 ## 2. Reflected design decisions
 
@@ -73,7 +73,7 @@ The WBS/CP now assumes:
 - W2-008 Mutation guard
 - W2-009 Atomic Level-2 mutation
 - W2-010 Atomic Level-3 claim mutation
-- W2-011 D1 migrations
+- W2-011 D1 migrations — complete
 - W2-012 Repository interfaces
 
 ### W3 Backend API
@@ -134,7 +134,7 @@ CP-02 Domain types fixed — complete
 ↓
 CP-03 Snapshot types fixed — complete
 ↓
-CP-04 D1 schema + migration
+CP-04 D1 schema + migration — complete
 ↓
 CP-05 Repository interfaces
 ↓
@@ -161,7 +161,6 @@ M1 Playable Solo Prototype
 
 ### Hard blockers
 - Domain/snapshot type mismatch
-- D1 migration unavailable
 - Atomic claim not proven
 - double claim possible
 
