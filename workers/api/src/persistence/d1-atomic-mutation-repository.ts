@@ -24,7 +24,7 @@ interface D1PreparedStatementLike {
 
 export interface D1AtomicDatabaseLike {
   prepare(query: string): D1PreparedStatementLike;
-  batch(statements: readonly D1PreparedStatementLike[]): Promise<readonly D1ResultLike[]>;
+  batch(statements: D1PreparedStatementLike[]): Promise<readonly D1ResultLike[]>;
 }
 
 interface ClaimedRow {
