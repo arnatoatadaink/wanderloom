@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-07-start-exploration-persistence`. Initial WSL validation found a TypeScript 7 test-only control-flow narrowing error in `start-exploration-persistence.test.ts`; runtime tests and builds passed. The test assertion pattern was corrected in commit `90db97b`. Re-validation is pending.
+Implementation and WSL validation complete on `feat/cp-07-start-exploration-persistence`. Initial validation found a TypeScript 7 test-only control-flow narrowing error in `start-exploration-persistence.test.ts`; the assertion pattern was corrected in commit `90db97b`, after which workspace typecheck passed.
 
 ## Scope
 
@@ -49,4 +49,14 @@ pnpm build
 git diff --check
 ```
 
-After these pass, CP-07 can be closed. The next critical-path target is CP-08: claim calculation.
+Validation summary:
+
+- workspace typecheck: passed for `packages/game-core`, `apps/web`, and `workers/api`
+- workspace tests: passed
+  - `packages/game-core`: 13 tests
+  - `workers/api`: 3 tests
+  - `apps/web`: 1 test
+- workspace build: passed, including Wrangler dry-run with `env.DB`
+- `git diff --check`: passed
+
+CP-07 is complete. The next critical-path target is CP-08: claim calculation.
