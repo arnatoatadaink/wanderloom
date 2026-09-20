@@ -58,7 +58,10 @@ describe("CP-07 start exploration persistence", () => {
   it("returns version_conflict when the CAS update loses", async () => {
     const repository: CoreSnapshotRepository = {
       async findByPlayerId() {
-        return makePlayer();
+        return {
+          ...makePlayer(),
+          stateVersion: 4
+        };
       },
       async insert() {},
       async updateIfVersionMatches() {
@@ -80,5 +83,8 @@ describe("CP-07 start exploration persistence", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe("version_conflict");
+    if (result.error.code !== "version_conflict") return;
+    expect(result.error.expectedVersion).toBe(2);
+    expect(result.error.actualVersion).toBe(4);
   });
 });
