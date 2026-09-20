@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/c-002-repository-interfaces`. Workspace-level validation remains to be run in the project WSL environment.
+Implementation and WSL workspace validation complete on `feat/c-002-repository-interfaces`.
 
 ## Scope
 
@@ -32,15 +32,17 @@ The claim variant carries the claim nonce, expected core/inventory versions, nex
 
 `packages/game-core/src/repository-contracts.test.ts` provides compile-time/runtime smoke coverage for all five interfaces and the atomic mutation union.
 
-A standalone strict TypeScript compile of the domain sources succeeded in the current execution environment. Full repository validation with the pinned project toolchain was not runnable here because this runtime has no pnpm installation and cannot resolve github.com for cloning.
+WSL validation completed successfully with the pinned project toolchain:
 
-Run in the project WSL environment:
+- workspace typecheck: passed for `packages/game-core`, `apps/web`, and `workers/api`
+- workspace tests: passed
+  - `apps/web`: 1 test
+  - `workers/api`: 1 test
+  - `packages/game-core`: 6 tests across 4 files, including 2 repository-contract tests
+- workspace build: passed
+  - Vite production build
+  - `game-core` TypeScript build
+  - Wrangler dry-run build with `env.DB` D1 binding
+- `git diff --check`: passed with no diff issues
 
-```bash
-pnpm typecheck
-pnpm test
-pnpm build
-git diff --check
-```
-
-Once those pass, CP-05 can be closed and the next critical-path target is CP-06 / E-001 exploration state machine.
+C-002 / W2-012 / CP-05 is complete. The next critical-path target is CP-06 / E-001 exploration state machine.
