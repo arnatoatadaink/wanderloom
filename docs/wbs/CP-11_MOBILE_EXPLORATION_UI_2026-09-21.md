@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-11-mobile-exploration-ui`. WSL validation is pending.
+Implementation and WSL validation complete on `feat/cp-11-mobile-exploration-ui`.
 
 ## Scope
 
@@ -101,15 +101,20 @@ Added pure tests for:
 
 The browser DOM rendering itself is not yet exercised in a browser integration test. That belongs with CP-12 playable-loop validation.
 
-## Validation target
+## Validation result
 
-Run in WSL:
+WSL validation passed:
 
-```bash
-pnpm typecheck
-pnpm test
-pnpm build
-git diff --check
-```
+- workspace typecheck: passed for `packages/game-core`, `apps/web`, and `workers/api`
+- initial TypeScript 7 failure on `./styles.css` side-effect import was fixed by adding `types: ["vite/client"]` to `apps/web/tsconfig.json`
+- workspace tests: passed
+  - `packages/game-core`: 16 tests across 7 files
+  - `apps/web`: 6 tests across 3 files
+  - `workers/api`: 13 tests across 5 files
+- workspace build: passed
+  - web Vite build: JS 11.01 KiB / gzip 3.51 KiB, CSS 3.52 KiB / gzip 1.41 KiB
+  - `game-core` TypeScript build
+  - Wrangler dry-run build with `env.DB` D1 binding
+- `git diff --check`: passed
 
-After validation, CP-11 can be closed and CP-12 playable-loop testing can begin.
+CP-11 is complete. The next critical-path target is CP-12: Playable loop test.
