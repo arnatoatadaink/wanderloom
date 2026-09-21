@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import type { ExplorationId } from "@wanderloom/game-core";
+
 import {
   M1_SMOKE_RECENT_ARCHIVE_RETENTION,
   resolveM1SmokeExploration
@@ -7,7 +9,7 @@ import {
 
 describe("CP-13 provisional M1 smoke balance validation", () => {
   it("keeps the validation fixture deterministic and linear", () => {
-    const single = resolveM1SmokeExploration("run-1" as never);
+    const single = resolveM1SmokeExploration("run-1" as ExplorationId);
     const runs = 12;
 
     const projected = {
