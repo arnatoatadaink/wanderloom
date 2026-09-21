@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-13-balance-payload-validation`. WSL validation is pending.
+Implementation complete on `feat/cp-13-balance-payload-validation`. WSL validation has passed for typecheck, tests, builds, and bundle measurement; final `git diff --check` confirmation is pending.
 
 ## Objective
 
@@ -84,16 +84,30 @@ Those depend on unresolved:
 
 The smoke loop intentionally has no drops and therefore does not prove those requirements.
 
-## Validation target
+## Validation result
 
-Run in WSL:
+WSL validation results recorded so far:
 
-```bash
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm --filter @wanderloom/web measure:dist
-git diff --check
-```
+- workspace typecheck: passed
+  - `packages/game-core`
+  - `apps/web`
+  - `workers/api`
+- workspace tests: passed
+  - `packages/game-core`: 17 tests across 8 files
+  - `apps/web`: 6 tests across 3 files
+  - `workers/api`: 15 tests across 7 files
+- workspace build: passed
+  - web Vite build
+  - `game-core` TypeScript build
+  - Wrangler dry-run build
+- Worker dry-run upload: 27.20 KiB / gzip 5.19 KiB
+- web dist measurement:
+  - total raw: 14,933 bytes
+  - total gzip: 5,177 bytes
+  - JavaScript gzip: 3,503 bytes
+  - CSS gzip: 1,411 bytes
+  - HTML gzip: 263 bytes
+- all web payload measurements are below the provisional CP-13 budgets
+- `git diff --check`: final confirmation pending
 
-After successful validation, CP-13 can be closed as the current exploration-loop balance/payload checkpoint. The remaining M1 gaps above must then be scheduled explicitly rather than treating the prototype as fully complete.
+After `git diff --check` passes, CP-13 can be closed as the current exploration-loop balance/payload checkpoint. The remaining M1 gaps above must then be scheduled explicitly rather than treating the prototype as fully complete.
