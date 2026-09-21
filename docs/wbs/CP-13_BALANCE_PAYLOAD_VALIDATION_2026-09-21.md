@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-13-balance-payload-validation`. WSL validation has passed for typecheck, tests, builds, and bundle measurement; final `git diff --check` confirmation is pending.
+Implementation and WSL validation complete on `feat/cp-13-balance-payload-validation`.
 
 ## Objective
 
@@ -108,6 +108,6 @@ WSL validation results recorded so far:
   - CSS gzip: 1,411 bytes
   - HTML gzip: 263 bytes
 - all web payload measurements are below the provisional CP-13 budgets
-- `git diff --check`: final confirmation pending
+- `git diff --check`: passed
 
-After `git diff --check` passes, CP-13 can be closed as the current exploration-loop balance/payload checkpoint. The remaining M1 gaps above must then be scheduled explicitly rather than treating the prototype as fully complete.
+CP-13 is closed as the current exploration-loop balance/payload checkpoint. The remaining M1 gaps above must now be scheduled explicitly rather than treating the prototype as fully complete.
