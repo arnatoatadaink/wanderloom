@@ -2,7 +2,7 @@
 
 ## Status
 
-Core API wiring is implemented on `feat/cp-10-guest-bootstrap-api-wiring`. Workspace-level WSL validation is pending.
+Core API wiring is implemented and WSL-validated on `feat/cp-10-guest-bootstrap-api-wiring`.
 
 CP-10 is not yet closed because server-side game-rule providers remain unresolved for the zone catalog, duration resolution, exploration resolution, and recent-archive retention policy.
 
@@ -69,15 +69,20 @@ No game-balance bonuses or starting equipment are introduced.
 - Worker routing through `createApi`
 - API tests for health, bootstrap, identity requirement, and unresolved game-data route behavior
 
-## Validation target
+## Validation result
 
-Run in WSL:
+WSL validation passed:
 
-```bash
-pnpm typecheck
-pnpm test
-pnpm build
-git diff --check
-```
+- workspace typecheck: passed for `apps/web`, `packages/game-core`, and `workers/api`
+- workspace tests: passed
+  - `apps/web`: 1 test
+  - `packages/game-core`: 16 tests across 7 files
+  - `workers/api`: 10 tests across 4 files, including 4 API wiring tests
+- workspace build: passed
+  - Vite production build
+  - `game-core` TypeScript build
+  - Wrangler dry-run build with `env.DB` D1 binding
+- Worker dry-run upload size: 25.79 KiB / gzip 4.86 KiB
+- `git diff --check`: passed
 
-After validation, the next CP-10 subtask is to supply the server-side rule providers required for zones/start/claim. CP-10 should be closed only after those routes can run without `not_ready` for the M1 loop.
+The next CP-10 subtask is to supply the server-side rule providers required for zones/start/claim. CP-10 should be closed only after those routes can run without `not_ready` for the M1 loop.
