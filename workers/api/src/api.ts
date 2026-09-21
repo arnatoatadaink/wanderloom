@@ -205,6 +205,31 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           exploration === null ||
           exploration.explorationId !== requestedExplorationId
         ) {
+          const claimed = await env.DB
+            .prepare(
+              `SELECT claimed_at
+               FROM recent_archive
+               WHERE player_id = ?1
+                 AND exploration_id = ?2
+               LIMIT 1`
+            )
+            .bind(playerId, requestedExplorationId)
+            .first<{ claimed_at: string }>();
+
+          if (claimed !== null) {
+            return json(
+              {
+                ok: false,
+                error: {
+                  code: "already_claimed",
+                  explorationId: requestedExplorationId,
+                  claimedAt: claimed.claimed_at
+                }
+              },
+              409
+            );
+          }
+
           return json(
             {
               ok: false,
