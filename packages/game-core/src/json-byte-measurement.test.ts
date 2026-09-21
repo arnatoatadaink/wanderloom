@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   measureJsonUtf8,
   type PlayerCoreSnapshot,
+  type PlayerId,
   type PlayerInventorySnapshot
 } from "./index";
 
@@ -11,7 +12,7 @@ describe("snapshot byte measurement", () => {
     const core: PlayerCoreSnapshot = {
       schemaVersion: 1,
       stateVersion: 0,
-      playerId: "player-1",
+      playerId: "player-1" as PlayerId,
       character: { stats: {} },
       progression: { level: 1, exp: 0, gold: 0 },
       activeExploration: null,
@@ -21,7 +22,7 @@ describe("snapshot byte measurement", () => {
     const inventory: PlayerInventorySnapshot = {
       schemaVersion: 1,
       stateVersion: 0,
-      playerId: "player-1",
+      playerId: "player-1" as PlayerId,
       equipment: { slots: {} },
       items: [],
       stackables: { quantities: {} },
