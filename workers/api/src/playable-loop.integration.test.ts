@@ -16,7 +16,7 @@ import {
 
 declare module "cloudflare:test" {
   interface ProvidedEnv {
-    DB: D1Database;
+    DB: ApiDatabase;
     TEST_MIGRATIONS: D1Migration[];
   }
 }
