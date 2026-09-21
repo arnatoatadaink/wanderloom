@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-12-playable-loop-test`. WSL validation is pending.
+Implementation and WSL validation complete on `feat/cp-12-playable-loop-test`.
 
 ## Scope
 
@@ -57,15 +57,21 @@ It does not automate browser DOM clicks. CP-11 already tests the client API/view
 
 Equipment is still outside this loop because W3-009/W4-007 depend on unresolved drop/equipment rules.
 
-## Validation target
+## Validation result
 
-Run in WSL:
+WSL validation passed:
 
-```bash
-pnpm typecheck
-pnpm test
-pnpm build
-git diff --check
-```
+- focused real-D1 playable-loop integration test: 1/1 passed
+- workspace typecheck: passed for `packages/game-core`, `apps/web`, and `workers/api`
+- workspace tests: passed
+  - `packages/game-core`: 16 tests across 7 files
+  - `apps/web`: 6 tests across 3 files
+  - `workers/api`: 14 tests across 6 files, including the real-D1 playable-loop test
+- workspace build: passed
+  - Vite web build
+  - `game-core` TypeScript build
+  - Wrangler dry-run with D1 binding
+- Worker dry-run upload size: 27.20 KiB / gzip 5.19 KiB
+- `git diff --check`: passed
 
-After validation, CP-12 can be closed and CP-13 balance/payload validation can begin.
+CP-12 is complete. The next critical-path target is CP-13: Balance / payload validation.
