@@ -9,3 +9,5 @@ export * from "./domain/repositories";
 export * from "./domain/start-exploration";
 
 export const GAME_CORE_WORKSPACE_READY = true;
+
+export * from "./domain/json-byte-measurement";
