@@ -96,7 +96,7 @@ describe("CP-10 API wiring", () => {
     });
   });
 
-  it("keeps unresolved game-data routes explicit", async () => {
+  it("serves the provisional M1 smoke zone catalog", async () => {
     const api = createApi();
     const response = await api.fetch(
       new Request("https://example.test/api/zones", {
@@ -107,13 +107,20 @@ describe("CP-10 API wiring", () => {
       { DB: makeDb() }
     );
 
-    expect(response.status).toBe(501);
-    await expect(response.json()).resolves.toEqual({
-      ok: false,
-      error: {
-        code: "not_ready",
-        feature: "zone_catalog"
-      }
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      zones: [
+        {
+          zoneId: "m1-smoke-frontier",
+          durations: [
+            {
+              durationId: "short",
+              durationMs: 300000
+            }
+          ]
+        }
+      ]
     });
   });
 });
