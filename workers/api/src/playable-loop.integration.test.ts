@@ -205,6 +205,39 @@ describe("CP-12 playable loop with real D1", () => {
 
     expect(archive?.count).toBe(1);
 
+    const duplicateClaimResponse = await api.fetch(
+      request(
+        `/api/explorations/${firstExplorationId}/claim`,
+        { method: "POST" }
+      ),
+      { DB: db }
+    );
+
+    expect(duplicateClaimResponse.status).toBe(409);
+    await expect(duplicateClaimResponse.json()).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "already_claimed",
+        explorationId: firstExplorationId
+      }
+    });
+
+    const stateAfterDuplicateResponse = await api.fetch(
+      request("/api/state"),
+      { DB: db }
+    );
+    await expect(stateAfterDuplicateResponse.json()).resolves.toMatchObject({
+      ok: true,
+      core: {
+        stateVersion: 2,
+        progression: {
+          gold: 5,
+          exp: 10
+        },
+        activeExploration: null
+      }
+    });
+
     nowValue = "2026-09-21T00:06:00.000Z";
 
     const restartResponse = await api.fetch(
