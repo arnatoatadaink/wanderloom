@@ -23,7 +23,7 @@ C-001 / W2-011 / CP-04 is complete on `feat/c-001-d1-migration`.
 The migration was applied successfully with Wrangler local D1 on WSL2; all five
 tables, three explicit indexes, and required constraints were verified. See
 [C-001 D1 migration implementation](C-001_D1_MIGRATION_2026-09-20.md).
-C-002 / W2-012 / CP-05 repository-interface implementation is complete on `feat/c-002-repository-interfaces`. The interfaces remain storage-agnostic and are defined against the fixed Batch B domain contracts; D1 implementation details stay in the Worker layer. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`. CP-05 is closed. See [C-002 repository interfaces](C-002_REPOSITORY_INTERFACES_2026-09-20.md). E-001 / W1-002 / CP-06 exploration-state-machine implementation is complete on `feat/e-001-exploration-state-machine`. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`; CP-06 is closed. See [E-001 exploration state machine](E-001_EXPLORATION_STATE_MACHINE_2026-09-20.md). CP-07 start-exploration persistence implementation is complete on `feat/cp-07-start-exploration-persistence`. WSL validation passed after a TypeScript 7 test-only narrowing fix: workspace typecheck, tests, builds, and `git diff --check` are successful. E-002 produces the next core snapshot and the Worker persistence service commits it through a D1 compare-and-swap update. Formal C-003 serialization and W3-005 HTTP route wiring remain separate pending work. CP-07 is closed. See [CP-07 start exploration persistence](CP-07_START_EXPLORATION_PERSISTENCE_2026-09-20.md). CP-08 claim-calculation implementation is complete on `feat/cp-08-claim-calculation`. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`. The pure domain calculation applies pre-resolved EXP/Gold/drops, clears the active exploration, advances core/inventory versions, and produces a pending-sync archive entry. Exact W1-003 through W1-006 balance/resolution formulas remain separate pending work behind the `ExplorationResolution` boundary. CP-08 is closed. See [CP-08 claim calculation](CP-08_CLAIM_CALCULATION_2026-09-21.md). CP-09 Atomic Level-3 claim mutation implementation is complete on `feat/cp-09-atomic-claim-mutation`. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`. The D1 batch guards core/inventory CAS, archive insertion, recent-archive pruning, and guard release behind a claim guard acquired only when expected versions, exploration ID, and claim nonce all match. Retry classification returns `already_claimed`, observed version conflicts, or invalid exploration state. CP-09 is closed. See [CP-09 Atomic Level-3 claim mutation](CP-09_ATOMIC_LEVEL3_CLAIM_MUTATION_2026-09-21.md). CP-10 Guest bootstrap + API wiring is complete for the exploration HTTP loop on `feat/cp-10-guest-bootstrap-api-wiring`. WSL re-validation passed for workspace typecheck, tests, builds, and `git diff --check`. Health/bootstrap/state/inventory/current exploration/zones/start/claim are wired. The isolated provisional `m1-smoke` providers define one 5-minute zone-duration, deterministic 5 Gold / 10 EXP / no-drop resolution, and archive retention 3 strictly as implementation-test fixtures, not accepted balance policy. Equipment mutation remains pending behind unresolved drop-generation/equipment-slot design and is not required to close the CP-10 exploration loop. CP-10 is closed. See [CP-10 Guest bootstrap + API wiring](CP-10_GUEST_BOOTSTRAP_API_WIRING_2026-09-21.md). CP-11 Mobile pre/exploring/result UI integration is complete on `feat/cp-11-mobile-exploration-ui`. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`. A TypeScript 7 CSS side-effect import error was resolved by adding `vite/client` types to the web tsconfig. The Vanilla TypeScript mobile shell bootstraps/restores guest identity, loads zones/state, selects destination/duration, starts exploration, derives the countdown from server `endsAt`, claims rewards, and renders the result. No image/font/framework assets were added. CP-11 is closed. See [CP-11 Mobile exploration UI](CP-11_MOBILE_EXPLORATION_UI_2026-09-21.md). CP-12 Playable loop test is complete on `feat/cp-12-playable-loop-test`. WSL validation passed. The Cloudflare Vitest integration test applies the real D1 migration and exercises guest bootstrap → zone read → start → current exploration → claim → persisted reward/archive verification → duplicate-claim rejection → second start. CP-12 also fixed the HTTP retry path so an already committed claim returns `already_claimed` instead of being hidden by the cleared active-exploration state. CP-12 is closed. See [CP-12 Playable loop test](CP-12_PLAYABLE_LOOP_TEST_2026-09-21.md). The next critical-path target is CP-13: Balance / payload validation.
+C-002 / W2-012 / CP-05 repository-interface implementation is complete on `feat/c-002-repository-interfaces`. The interfaces remain storage-agnostic and are defined against the fixed Batch B domain contracts; D1 implementation details stay in the Worker layer. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`. CP-05 is closed. See [C-002 repository interfaces](C-002_REPOSITORY_INTERFACES_2026-09-20.md). E-001 / W1-002 / CP-06 exploration-state-machine implementation is complete on `feat/e-001-exploration-state-machine`. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`; CP-06 is closed. See [E-001 exploration state machine](E-001_EXPLORATION_STATE_MACHINE_2026-09-20.md). CP-07 start-exploration persistence implementation is complete on `feat/cp-07-start-exploration-persistence`. WSL validation passed after a TypeScript 7 test-only narrowing fix: workspace typecheck, tests, builds, and `git diff --check` are successful. E-002 produces the next core snapshot and the Worker persistence service commits it through a D1 compare-and-swap update. Formal C-003 serialization and W3-005 HTTP route wiring remain separate pending work. CP-07 is closed. See [CP-07 start exploration persistence](CP-07_START_EXPLORATION_PERSISTENCE_2026-09-20.md). CP-08 claim-calculation implementation is complete on `feat/cp-08-claim-calculation`. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`. The pure domain calculation applies pre-resolved EXP/Gold/drops, clears the active exploration, advances core/inventory versions, and produces a pending-sync archive entry. Exact W1-003 through W1-006 balance/resolution formulas remain separate pending work behind the `ExplorationResolution` boundary. CP-08 is closed. See [CP-08 claim calculation](CP-08_CLAIM_CALCULATION_2026-09-21.md). CP-09 Atomic Level-3 claim mutation implementation is complete on `feat/cp-09-atomic-claim-mutation`. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`. The D1 batch guards core/inventory CAS, archive insertion, recent-archive pruning, and guard release behind a claim guard acquired only when expected versions, exploration ID, and claim nonce all match. Retry classification returns `already_claimed`, observed version conflicts, or invalid exploration state. CP-09 is closed. See [CP-09 Atomic Level-3 claim mutation](CP-09_ATOMIC_LEVEL3_CLAIM_MUTATION_2026-09-21.md). CP-10 Guest bootstrap + API wiring is complete for the exploration HTTP loop on `feat/cp-10-guest-bootstrap-api-wiring`. WSL re-validation passed for workspace typecheck, tests, builds, and `git diff --check`. Health/bootstrap/state/inventory/current exploration/zones/start/claim are wired. The isolated provisional `m1-smoke` providers define one 5-minute zone-duration, deterministic 5 Gold / 10 EXP / no-drop resolution, and archive retention 3 strictly as implementation-test fixtures, not accepted balance policy. Equipment mutation remains pending behind unresolved drop-generation/equipment-slot design and is not required to close the CP-10 exploration loop. CP-10 is closed. See [CP-10 Guest bootstrap + API wiring](CP-10_GUEST_BOOTSTRAP_API_WIRING_2026-09-21.md). CP-11 Mobile pre/exploring/result UI integration is complete on `feat/cp-11-mobile-exploration-ui`. WSL validation passed for workspace typecheck, tests, builds, and `git diff --check`. A TypeScript 7 CSS side-effect import error was resolved by adding `vite/client` types to the web tsconfig. The Vanilla TypeScript mobile shell bootstraps/restores guest identity, loads zones/state, selects destination/duration, starts exploration, derives the countdown from server `endsAt`, claims rewards, and renders the result. No image/font/framework assets were added. CP-11 is closed. See [CP-11 Mobile exploration UI](CP-11_MOBILE_EXPLORATION_UI_2026-09-21.md). CP-12 Playable loop test is complete on `feat/cp-12-playable-loop-test`. WSL validation passed. The Cloudflare Vitest integration test applies the real D1 migration and exercises guest bootstrap → zone read → start → current exploration → claim → persisted reward/archive verification → duplicate-claim rejection → second start. CP-12 also fixed the HTTP retry path so an already committed claim returns `already_claimed` instead of being hidden by the cleared active-exploration state. CP-12 is closed. See [CP-12 Playable loop test](CP-12_PLAYABLE_LOOP_TEST_2026-09-21.md). CP-13 Balance / payload validation is implementation-complete on `feat/cp-13-balance-payload-validation`; WSL validation is pending. UTF-8 snapshot measurement, API payload budgets, web dist raw/gzip measurement, and a deterministic smoke-balance fixture check are implemented. The budgets are internal low-bandwidth guardrails rather than platform limits or accepted game-balance targets. See [CP-13 Balance / payload validation](CP-13_BALANCE_PAYLOAD_VALIDATION_2026-09-21.md). Closing CP-13 will not satisfy the full M1 Definition of Done because drop generation, equipment mutation/UI, and claim/equipment concurrency remain unresolved.
 
 ## 2. Reflected design decisions
 
@@ -68,7 +68,7 @@ The WBS/CP now assumes:
 - W2-003 Inventory snapshot schema
 - W2-004 Recent archive schema
 - W2-005 Snapshot versioning
-- W2-006 Snapshot size metrics
+- W2-006 Snapshot size metrics — implementation complete; validation pending
 - W2-007 Optimistic locking
 - W2-008 Mutation guard
 - W2-009 Atomic Level-2 mutation
@@ -97,7 +97,7 @@ The WBS/CP now assumes:
 - W4-006 result screen — complete
 - W4-007 inventory/equipment minimum
 - W4-008 compact number formatting
-- W4-009 low-bandwidth asset measurement
+- W4-009 low-bandwidth asset measurement — implementation complete; validation pending
 
 ### W5 Validation
 - W5-001 unit tests for game-core
@@ -106,8 +106,8 @@ The WBS/CP now assumes:
 - W5-004 double-claim tests — complete for current exploration loop
 - W5-005 worker/D1 integration tests — complete for current exploration loop
 - W5-006 playable-loop test — complete
-- W5-007 balance simulation harness
-- W5-008 payload / snapshot-size metrics
+- W5-007 balance simulation harness — provisional smoke-fixture validation implemented; formal balance work pending
+- W5-008 payload / snapshot-size metrics — implementation complete; validation pending
 
 ### X1 Future Storage
 - X1-001 Google `appDataFolder` integration
@@ -152,7 +152,7 @@ CP-11 Mobile pre/exploring/result UI integration — complete
 ↓
 CP-12 Playable loop test — complete
 ↓
-CP-13 Balance/payload validation
+CP-13 Balance/payload validation — implementation complete; validation pending
 ↓
 M1 Playable Solo Prototype
 ```
@@ -160,9 +160,10 @@ M1 Playable Solo Prototype
 ## 5. CP blockers
 
 ### Hard blockers
-- Domain/snapshot type mismatch
-- Atomic claim not proven
-- double claim possible
+- M1 drop generation / reward model not implemented
+- W3-009 equipment mutation not implemented
+- W4-007 inventory/equipment minimum not implemented
+- concurrent equipment/claim safety not yet proven
 
 ### Non-blockers
 - exact rarity percentages
