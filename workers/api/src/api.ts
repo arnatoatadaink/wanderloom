@@ -9,6 +9,12 @@ import { D1AtomicMutationRepository, type D1AtomicDatabaseLike } from "./persist
 import { D1CoreSnapshotRepository, type D1DatabaseLike } from "./persistence/d1-core-snapshot-repository";
 import { D1InventorySnapshotRepository } from "./persistence/d1-inventory-snapshot-repository";
 import { bootstrapGuestPlayer } from "./services/guest-bootstrap";
+import {
+  M1_SMOKE_RECENT_ARCHIVE_RETENTION,
+  M1_SMOKE_ZONES,
+  resolveM1SmokeDurationMs,
+  resolveM1SmokeExploration
+} from "./m1-smoke-rules";
 import { persistStartedExploration } from "./services/start-exploration-persistence";
 
 export type ApiDatabase = D1DatabaseLike & D1AtomicDatabaseLike;
@@ -39,9 +45,9 @@ const defaultRuntime: ApiRuntime = {
   createExplorationId: () => crypto.randomUUID() as ExplorationId,
   createClaimNonce: () => crypto.randomUUID(),
   createSeed: () => crypto.randomUUID(),
-  resolveDurationMs: () => null,
-  resolveExploration: () => null,
-  recentArchiveRetention: null
+  resolveDurationMs: resolveM1SmokeDurationMs,
+  resolveExploration: resolveM1SmokeExploration,
+  recentArchiveRetention: M1_SMOKE_RECENT_ARCHIVE_RETENTION
 };
 
 function json(body: unknown, status = 200): Response {
@@ -135,7 +141,10 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
       }
 
       if (method === "GET" && url.pathname === "/api/zones") {
-        return notReady("zone_catalog");
+        return json({
+          ok: true,
+          zones: M1_SMOKE_ZONES
+        });
       }
 
       if (method === "POST" && url.pathname === "/api/explorations") {
