@@ -83,12 +83,17 @@ WSL validation passed:
 - workspace tests: passed
   - `apps/web`: 1 test
   - `packages/game-core`: 16 tests across 7 files
-  - `workers/api`: 10 tests across 4 files, including 4 API wiring tests
+  - `workers/api`: 13 tests across 5 files, including 3 M1 smoke-rule tests and 4 API wiring tests
 - workspace build: passed
   - Vite production build
   - `game-core` TypeScript build
   - Wrangler dry-run build with `env.DB` D1 binding
-- Worker dry-run upload size: 25.79 KiB / gzip 4.86 KiB
+- Worker dry-run upload size: 26.59 KiB / gzip 5.10 KiB
 - `git diff --check`: passed
 
-The provisional providers required for zones/start/claim are now implemented. Re-validation is required before CP-10 is closed. Equipment mutation remains outside the CP-10 exploration-loop closure because its prerequisites (drop generation and equipment-slot vocabulary) remain unresolved W1 work.
+The provisional providers required for zones/start/claim are implemented and WSL re-validation passed. CP-10 is closed for the exploration HTTP loop. Equipment mutation remains outside this closure because its prerequisites (drop generation and equipment-slot vocabulary) remain unresolved W1 work.
+
+
+## Closure
+
+CP-10 exploration-loop API wiring is complete. The next critical-path target is CP-11: Mobile pre/exploring/result UI integration.
