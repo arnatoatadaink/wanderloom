@@ -1,0 +1,313 @@
+:root {
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  color: #f5f2e9;
+  background: #111715;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(119, 147, 119, 0.16), transparent 35rem),
+    #111715;
+}
+
+button,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.app-shell {
+  width: min(100%, 520px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 20px 16px 28px;
+}
+
+.topbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: 1.75rem;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 1.45rem;
+}
+
+.eyebrow {
+  margin-bottom: 5px;
+  color: #9eaf9f;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.compact-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  font-size: 0.72rem;
+}
+
+.compact-stats span {
+  padding: 6px 8px;
+  border: 1px solid #2a3732;
+  border-radius: 999px;
+  background: #17201d;
+}
+
+.panel,
+.subpanel,
+.journey-card,
+.destination-card,
+.reward-card,
+.metrics-grid > div {
+  border: 1px solid #2b3833;
+  background: rgba(24, 33, 29, 0.94);
+}
+
+.panel {
+  min-height: 480px;
+  padding: 18px;
+  border-radius: 22px;
+}
+
+.section-heading {
+  margin-bottom: 18px;
+}
+
+.destination-list {
+  display: grid;
+  gap: 10px;
+}
+
+.destination-card {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border-radius: 16px;
+  color: inherit;
+  text-align: left;
+}
+
+.destination-card.selected {
+  border-color: #9fbf9b;
+  box-shadow: inset 0 0 0 1px #9fbf9b;
+}
+
+.destination-card strong,
+.destination-card small {
+  display: block;
+}
+
+.destination-card small,
+.muted,
+.hint {
+  color: #9ca9a2;
+}
+
+.destination-mark {
+  font-size: 1.5rem;
+}
+
+.subpanel {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #a8b4ad;
+  font-size: 0.78rem;
+}
+
+.duration-select {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid #384840;
+  border-radius: 10px;
+  color: #f5f2e9;
+  background: #111815;
+}
+
+.metrics-grid,
+.reward-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+
+.metrics-grid > div,
+.reward-card {
+  padding: 12px 10px;
+  border-radius: 13px;
+}
+
+.metrics-grid span,
+.reward-card span {
+  display: block;
+  margin-bottom: 5px;
+  color: #97a59e;
+  font-size: 0.68rem;
+}
+
+.metrics-grid strong,
+.reward-card strong {
+  font-size: 0.86rem;
+}
+
+.primary-action,
+.secondary-action {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  font-weight: 750;
+}
+
+.primary-action {
+  border: 0;
+  color: #112017;
+  background: #b8d7a8;
+}
+
+.secondary-action {
+  border: 1px solid #43544c;
+  color: #edf1ed;
+  background: #1d2823;
+}
+
+.journey-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 17px;
+  border-radius: 17px;
+}
+
+.journey-card strong,
+.journey-card span {
+  display: block;
+}
+
+.journey-icon {
+  font-size: 2rem;
+}
+
+.countdown {
+  text-align: right;
+}
+
+.progress-track {
+  height: 8px;
+  margin: 18px 0 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #26312c;
+}
+
+.progress-fill {
+  width: 68%;
+  height: 100%;
+  border-radius: inherit;
+  background: #779475;
+  animation: pulse-progress 2.4s ease-in-out infinite;
+}
+
+.progress-fill.complete {
+  width: 100%;
+  animation: none;
+}
+
+.hint {
+  margin: 0 0 18px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.center-state {
+  display: grid;
+  min-height: 420px;
+  place-content: center;
+  text-align: center;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 14px;
+  border: 3px solid #31413a;
+  border-top-color: #b8d7a8;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.error-text {
+  max-width: 360px;
+  color: #e7b6a8;
+  overflow-wrap: anywhere;
+}
+
+.status-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 6px 0;
+  color: #87958e;
+  font-size: 0.7rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-progress {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (min-width: 700px) {
+  .app-shell {
+    padding-top: 36px;
+  }
+}
