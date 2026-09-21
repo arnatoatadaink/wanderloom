@@ -4,15 +4,20 @@ import {
 } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import type {
-  ExplorationId,
-  PlayerId
+import {
+  measureJsonUtf8,
+  type ExplorationId,
+  type PlayerId
 } from "@wanderloom/game-core";
 import {
   createApi,
   type ApiDatabase,
   type ApiRuntime
 } from "./api";
+import {
+  CP13_PAYLOAD_BUDGET_BYTES,
+  CP13_SNAPSHOT_BUDGET_BYTES
+} from "./cp13-budgets";
 
 declare module "cloudflare:test" {
   interface ProvidedEnv {
@@ -80,12 +85,25 @@ describe("CP-12 playable loop with real D1", () => {
       { DB: db }
     );
     expect(bootstrapResponse.status).toBe(201);
+    const bootstrapBody = (await bootstrapResponse.clone().json()) as {
+      readonly core: unknown;
+      readonly inventory: unknown;
+    };
+    expect(measureJsonUtf8(bootstrapBody.core).bytes).toBeLessThanOrEqual(
+      CP13_SNAPSHOT_BUDGET_BYTES.core
+    );
+    expect(measureJsonUtf8(bootstrapBody.inventory).bytes).toBeLessThanOrEqual(
+      CP13_SNAPSHOT_BUDGET_BYTES.inventory
+    );
 
     const zonesResponse = await api.fetch(
       request("/api/zones"),
       { DB: db }
     );
     expect(zonesResponse.status).toBe(200);
+    expect(
+      new TextEncoder().encode(await zonesResponse.clone().text()).byteLength
+    ).toBeLessThanOrEqual(CP13_PAYLOAD_BUDGET_BYTES.zoneCatalog);
 
     const startResponse = await api.fetch(
       request("/api/explorations", {
@@ -144,6 +162,9 @@ describe("CP-12 playable loop with real D1", () => {
       { DB: db }
     );
     expect(claimResponse.status).toBe(200);
+    expect(
+      new TextEncoder().encode(await claimResponse.clone().text()).byteLength
+    ).toBeLessThanOrEqual(CP13_PAYLOAD_BUDGET_BYTES.claim);
 
     const claimed = (await claimResponse.json()) as {
       readonly core: {
@@ -176,11 +197,23 @@ describe("CP-12 playable loop with real D1", () => {
       gold: 5,
       exp: 10
     });
+    expect(measureJsonUtf8(claimed.core).bytes).toBeLessThanOrEqual(
+      CP13_SNAPSHOT_BUDGET_BYTES.core
+    );
+    expect(measureJsonUtf8(claimed.inventory).bytes).toBeLessThanOrEqual(
+      CP13_SNAPSHOT_BUDGET_BYTES.inventory
+    );
+    expect(measureJsonUtf8(claimed.archiveEntry).bytes).toBeLessThanOrEqual(
+      CP13_SNAPSHOT_BUDGET_BYTES.archiveEntry
+    );
 
     const persistedStateResponse = await api.fetch(
       request("/api/state"),
       { DB: db }
     );
+    expect(
+      new TextEncoder().encode(await persistedStateResponse.clone().text()).byteLength
+    ).toBeLessThanOrEqual(CP13_PAYLOAD_BUDGET_BYTES.state);
     await expect(persistedStateResponse.json()).resolves.toMatchObject({
       ok: true,
       core: {
