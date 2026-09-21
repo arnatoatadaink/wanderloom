@@ -35,17 +35,23 @@ Claim reads authoritative core/inventory snapshots, requests a server-side `Expl
 
 No reward/result snapshot is accepted from the client.
 
-## Deliberately unresolved providers
+## Provisional M1 smoke providers
 
-The default Worker runtime returns `not_ready` until these server-side policies are provided:
+To make the CP-10 exploration HTTP loop executable without pretending that game balance is settled, the default Worker runtime now uses an explicitly provisional `m1-smoke` ruleset:
 
-- zone catalog
-- zone + duration -> authoritative duration resolution
-- exploration -> `ExplorationResolution`
-- recent archive retention count
-- equipment mutation
+- one smoke-test zone: `m1-smoke-frontier`
+- one duration: `short` = 300000 ms
+- deterministic result: `success`
+- Gold reward: 5
+- EXP reward: 10
+- drops: none
+- recent archive retention: 3
 
-This preserves the existing WBS decision not to invent balance values or prematurely choose 1/3/5 archive retention.
+These values are implementation-test fixtures, not accepted game-balance decisions. They are isolated in `m1-smoke-rules.ts` and are intended to be replaced by W1-003 through W1-006 outputs.
+
+`GET /api/zones`, expedition start, and expedition claim can now use default server-side providers instead of returning `not_ready`.
+
+Equipment mutation remains deliberately unresolved because drop generation and equipment-slot vocabulary are not yet fixed.
 
 ## Guest bootstrap baseline
 
@@ -85,4 +91,4 @@ WSL validation passed:
 - Worker dry-run upload size: 25.79 KiB / gzip 4.86 KiB
 - `git diff --check`: passed
 
-The next CP-10 subtask is to supply the server-side rule providers required for zones/start/claim. CP-10 should be closed only after those routes can run without `not_ready` for the M1 loop.
+The provisional providers required for zones/start/claim are now implemented. Re-validation is required before CP-10 is closed. Equipment mutation remains outside the CP-10 exploration-loop closure because its prerequisites (drop generation and equipment-slot vocabulary) remain unresolved W1 work.
