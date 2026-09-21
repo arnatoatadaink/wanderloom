@@ -96,6 +96,15 @@ describe("CP-12 playable loop with real D1", () => {
       CP13_SNAPSHOT_BUDGET_BYTES.inventory
     );
 
+    const inventoryResponse = await api.fetch(
+      request("/api/inventory"),
+      { DB: db }
+    );
+    expect(inventoryResponse.status).toBe(200);
+    expect(
+      new TextEncoder().encode(await inventoryResponse.clone().text()).byteLength
+    ).toBeLessThanOrEqual(CP13_PAYLOAD_BUDGET_BYTES.inventory);
+
     const zonesResponse = await api.fetch(
       request("/api/zones"),
       { DB: db }
