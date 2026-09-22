@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { ExplorationId, ZoneId } from "@wanderloom/game-core";
 import {
   M1_SMOKE_RECENT_ARCHIVE_RETENTION,
+  M1_SMOKE_ZONES,
   resolveM1SmokeDurationMs,
   resolveM1SmokeExploration
 } from "./m1-smoke-rules";
@@ -15,6 +16,14 @@ describe("M1 smoke rules", () => {
         "short"
       )
     ).toBe(300_000);
+  });
+
+  it("exposes the provisional reward preview", () => {
+    expect(M1_SMOKE_ZONES[0]?.durations[0]?.preview).toEqual({
+      gold: { min: 5, max: 5 },
+      exp: { min: 10, max: 10 },
+      drops: { minItems: 0, maxItems: 0 }
+    });
   });
 
   it("rejects unknown zone/duration combinations", () => {
