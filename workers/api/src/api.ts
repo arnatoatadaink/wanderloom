@@ -16,8 +16,7 @@ import { bootstrapGuestPlayer } from "./services/guest-bootstrap";
 import {
   M1_SMOKE_RECENT_ARCHIVE_RETENTION,
   M1_SMOKE_ZONES,
-  resolveM1SmokeDurationMs,
-  resolveM1SmokeExploration
+  resolveM1SmokeDurationMs
 } from "./m1-smoke-rules";
 import { persistStartedExploration } from "./services/start-exploration-persistence";
 
