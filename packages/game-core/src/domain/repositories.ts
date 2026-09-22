@@ -92,7 +92,7 @@ export type AtomicMutation =
   | ClaimAtomicMutation;
 
 export interface AtomicMutationCommit {
-  readonly coreStateVersion: number;
+  readonly coreStateVersion: number | null;
   readonly inventoryStateVersion: number | null;
   readonly explorationId: ExplorationId | null;
 }
