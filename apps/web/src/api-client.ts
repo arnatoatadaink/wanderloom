@@ -50,6 +50,9 @@ export interface ItemDto {
 
 export interface InventoryDto {
   readonly stateVersion: number;
+  readonly equipment: {
+    readonly slots: Readonly<Record<string, string | null>>;
+  };
   readonly items: readonly ItemDto[];
 }
 
@@ -131,6 +134,37 @@ export class WanderloomApiClient {
       readonly zones: readonly ZoneDto[];
     }>("/api/zones");
     return body.zones;
+  }
+
+  async getInventory(): Promise<InventoryDto> {
+    const body = await this.request<{
+      readonly ok: true;
+      readonly inventory: InventoryDto;
+    }>("/api/inventory");
+    return body.inventory;
+  }
+
+  async equipItem(
+    slot: string,
+    itemInstanceId: string,
+    expectedInventoryStateVersion: number
+  ): Promise<InventoryDto> {
+    const body = await this.request<{
+      readonly ok: true;
+      readonly inventory: InventoryDto;
+      readonly idempotent: boolean;
+    }>("/api/equipment", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        slot,
+        itemInstanceId,
+        expectedInventoryStateVersion
+      })
+    });
+    return body.inventory;
   }
 
   async getState(): Promise<CoreDto> {
