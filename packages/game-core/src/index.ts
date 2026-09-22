@@ -13,3 +13,5 @@ export const GAME_CORE_WORKSPACE_READY = true;
 export * from "./domain/json-byte-measurement";
 
 export * from "./domain/reward-drop-contract";
+
+export * from "./domain/seeded-m1-resolution";
