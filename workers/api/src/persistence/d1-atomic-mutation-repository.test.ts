@@ -108,7 +108,7 @@ describe("CP-16 D1 inventory mutation", () => {
     expect(result).toEqual({
       ok: true,
       value: {
-        coreStateVersion: 0,
+        coreStateVersion: null,
         inventoryStateVersion: 6,
         explorationId: null
       }
