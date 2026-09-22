@@ -81,7 +81,7 @@ M1 DoD item 8 requires receiving Gold / EXP / drop before equipment work is mean
 
 ---
 
-### CP-16 — Equipment domain + atomic persistence/API
+### CP-16 — Equipment domain + atomic persistence/API — implementation complete; validation pending
 
 Primary WBS mapping:
 
@@ -223,4 +223,4 @@ These should remain in the WBS but must not delay CP-14 through CP-19.
 
 ## Immediate next action
 
-Start CP-16 Equipment domain + atomic persistence/API.
+Validate CP-16 in WSL. After successful validation, close CP-16 and start CP-17 Inventory/equipment minimum UI.
