@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import type {
   AlreadyClaimed,
   ExplorationId,
+  InvalidEquipmentSlot,
   InvalidExplorationState,
+  ItemInstanceId,
+  ItemNotOwned,
   MutationError,
   MutationResult,
   SnapshotIntegrityError,
@@ -20,6 +23,10 @@ function describeMutationError(error: MutationError): string {
       return `${error.actualState}:${error.allowedStates.join(",")}`;
     case "snapshot_integrity_error":
       return `${error.snapshot}:${error.violations.length}`;
+    case "invalid_equipment_slot":
+      return `${error.slot}:${error.allowedSlots.join(",")}`;
+    case "item_not_owned":
+      return error.itemInstanceId;
   }
 }
 
@@ -54,14 +61,25 @@ describe("B-005 mutation results and errors", () => {
             message: "must be a non-negative finite number"
           }
         ]
-      } satisfies SnapshotIntegrityError
+      } satisfies SnapshotIntegrityError,
+      {
+        code: "invalid_equipment_slot",
+        slot: "weapon",
+        allowedSlots: ["charm"]
+      } satisfies InvalidEquipmentSlot,
+      {
+        code: "item_not_owned",
+        itemInstanceId: "item-missing" as ItemInstanceId
+      } satisfies ItemNotOwned
     ];
 
     expect(errors.map(describeMutationError)).toEqual([
       "core:3->4",
       "exploration-1:2026-09-18T09:05:01.000Z",
       "exploring:ready_to_claim",
-      "inventory:1"
+      "inventory:1",
+      "weapon:charm",
+      "item-missing"
     ]);
   });
 
