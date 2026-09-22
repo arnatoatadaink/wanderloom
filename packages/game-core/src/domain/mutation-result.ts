@@ -1,5 +1,5 @@
 import type { IsoDateTime } from "./core-snapshot";
-import type { ExplorationId } from "./ids";
+import type { ExplorationId, ItemInstanceId } from "./ids";
 
 export type SnapshotKind = "core" | "inventory";
 
@@ -39,11 +39,24 @@ export interface SnapshotIntegrityError {
   readonly violations: readonly SnapshotIntegrityViolation[];
 }
 
+export interface InvalidEquipmentSlot {
+  readonly code: "invalid_equipment_slot";
+  readonly slot: string;
+  readonly allowedSlots: readonly string[];
+}
+
+export interface ItemNotOwned {
+  readonly code: "item_not_owned";
+  readonly itemInstanceId: ItemInstanceId;
+}
+
 export type MutationError =
   | VersionConflict
   | AlreadyClaimed
   | InvalidExplorationState
-  | SnapshotIntegrityError;
+  | SnapshotIntegrityError
+  | InvalidEquipmentSlot
+  | ItemNotOwned;
 
 export interface MutationSuccess<Value> {
   readonly ok: true;
