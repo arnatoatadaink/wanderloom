@@ -16,7 +16,12 @@ describe("CP-11 view model", () => {
           durations: [
             {
               durationId: "short",
-              durationMs: 300_000
+              durationMs: 300_000,
+              preview: {
+                gold: { min: 5, max: 5 },
+                exp: { min: 10, max: 10 },
+                drops: { minItems: 0, maxItems: 0 }
+              }
             }
           ]
         }
