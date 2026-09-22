@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { WanderloomApiClient } from "./api-client";
 
-describe("CP-11 API client", () => {
+describe("CP-11/17 API client", () => {
   it("persists the bootstrapped player identity in the client", async () => {
     const client = new WanderloomApiClient(async () =>
       Response.json(
@@ -16,6 +16,7 @@ describe("CP-11 API client", () => {
           },
           inventory: {
             stateVersion: 0,
+            equipment: { slots: {} },
             items: []
           }
         },
@@ -26,6 +27,58 @@ describe("CP-11 API client", () => {
     await client.bootstrapGuest();
 
     expect(client.getPlayerId()).toBe("player-1");
+  });
+
+  it("reads inventory and sends equipment actions with the expected version", async () => {
+    const observed: Array<{ path: string; body: unknown }> = [];
+    const client = new WanderloomApiClient(async (input, init) => {
+      const path = String(input);
+      const body = init?.body ? JSON.parse(String(init.body)) : null;
+      observed.push({ path, body });
+
+      if (path === "/api/inventory") {
+        return Response.json({
+          ok: true,
+          inventory: {
+            stateVersion: 1,
+            equipment: { slots: { charm: null } },
+            items: [{
+              itemInstanceId: "item-1",
+              itemDefinitionId: "m1-wayfarer-charm",
+              createdAt: "2026-09-22T00:00:00.000Z"
+            }]
+          }
+        });
+      }
+
+      return Response.json({
+        ok: true,
+        idempotent: false,
+        inventory: {
+          stateVersion: 2,
+          equipment: { slots: { charm: "item-1" } },
+          items: [{
+            itemInstanceId: "item-1",
+            itemDefinitionId: "m1-wayfarer-charm",
+            createdAt: "2026-09-22T00:00:00.000Z"
+          }]
+        }
+      });
+    }, "player-1");
+
+    const inventory = await client.getInventory();
+    expect(inventory.stateVersion).toBe(1);
+
+    const equipped = await client.equipItem("charm", "item-1", inventory.stateVersion);
+    expect(equipped.equipment.slots.charm).toBe("item-1");
+    expect(observed[1]).toEqual({
+      path: "/api/equipment",
+      body: {
+        slot: "charm",
+        itemInstanceId: "item-1",
+        expectedInventoryStateVersion: 1
+      }
+    });
   });
 
   it("sends the guest identity on player-scoped requests", async () => {
