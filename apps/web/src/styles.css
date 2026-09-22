@@ -311,3 +311,52 @@ h2 {
     padding-top: 36px;
   }
 }
+
+.inventory-panel {
+  margin: 16px 0 18px;
+  padding: 14px;
+  border: 1px solid #2b3833;
+  border-radius: 14px;
+  background: rgba(24, 33, 29, 0.94);
+}
+
+.inventory-heading,
+.inventory-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inventory-heading {
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+}
+
+.inventory-list {
+  display: grid;
+  gap: 8px;
+}
+
+.inventory-item {
+  padding: 10px 0;
+  border-top: 1px solid #2b3833;
+}
+
+.inventory-item strong,
+.inventory-item small {
+  display: block;
+}
+
+.inventory-item small {
+  margin-top: 3px;
+  color: #87958e;
+  font-size: 0.68rem;
+}
+
+.inventory-action {
+  width: auto;
+  min-width: 92px;
+  min-height: 38px;
+  padding: 8px 12px;
+}
