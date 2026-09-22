@@ -1,20 +1,13 @@
 import type { IsoDateTime } from "./core-snapshot";
 import type { ItemInstanceId } from "./ids";
 import type { PlayerInventorySnapshot } from "./inventory-snapshot";
-import type { MutationResult } from "./mutation-result";
+import type {
+  InvalidEquipmentSlot,
+  ItemNotOwned,
+  MutationResult
+} from "./mutation-result";
 
 export type M1EquipmentSlot = "charm";
-
-export interface InvalidEquipmentSlot {
-  readonly code: "invalid_equipment_slot";
-  readonly slot: string;
-  readonly allowedSlots: readonly M1EquipmentSlot[];
-}
-
-export interface ItemNotOwned {
-  readonly code: "item_not_owned";
-  readonly itemInstanceId: ItemInstanceId;
-}
 
 export interface EquipItemInput {
   readonly inventory: PlayerInventorySnapshot;
