@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-17-inventory-equipment-ui`. WSL validation is pending.
+Implementation and WSL validation complete on `feat/cp-17-inventory-equipment-ui`.
 
 ## Objective
 
@@ -80,19 +80,24 @@ The API-client test now covers:
 - no heavy asset dependency: preserved
 - CP-13 bundle budget: pending WSL validation
 
-## Validation target
+## Validation result
 
-Run in WSL:
+WSL validation passed:
 
-```bash
-git fetch
-git switch feat/cp-17-inventory-equipment-ui
+- workspace typecheck: passed
+- tests:
+  - `packages/game-core`: 22 tests across 11 files
+  - `apps/web`: 7 tests across 3 files
+  - `workers/api`: 17 tests across 7 files
+- workspace build: passed
+- Worker dry-run upload: 33.28 KiB / gzip 6.18 KiB
+- web dist:
+  - total raw: 17,800 bytes
+  - total gzip: 5,757 bytes
+  - JavaScript gzip: 3,970 bytes
+  - CSS gzip: 1,526 bytes
+  - HTML gzip: 261 bytes
+- CP-13 web budgets remain satisfied
+- `git diff --check`: passed
 
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm --filter @wanderloom/web measure:dist
-git diff --check
-```
-
-After successful validation, CP-17 can be closed and CP-18 claim/equipment race and failure validation can begin.
+CP-17 is closed. CP-18 claim/equipment race and failure validation is next.
