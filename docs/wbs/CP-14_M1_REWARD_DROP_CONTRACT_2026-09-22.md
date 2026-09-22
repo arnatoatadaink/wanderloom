@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-14-m1-reward-drop-contract`. WSL validation has passed for typecheck, tests, builds, and web bundle measurement; final `git diff --check` confirmation is pending.
+Implementation and WSL validation complete on `feat/cp-14-m1-reward-drop-contract`.
 
 ## Objective
 
@@ -106,6 +106,6 @@ WSL validation results recorded so far:
   - CSS gzip: 1,411 bytes
   - HTML gzip: 263 bytes
 - CP-13 web payload budgets remain satisfied
-- `git diff --check`: final confirmation pending
+- `git diff --check`: passed
 
-After `git diff --check` passes, CP-14 can be closed and CP-15 can begin.
+CP-14 is closed. CP-15 can begin.
