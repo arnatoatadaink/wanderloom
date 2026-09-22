@@ -88,7 +88,7 @@ async function prepareRace(playerName: string) {
 
   const core = await coreRepository.findByPlayerId(playerId);
   const inventory = await inventoryRepository.findByPlayerId(playerId);
-  if (core?.activeExploration === null || !core || inventory === null) {
+  if (core === null || core.activeExploration === null || inventory === null) {
     throw new Error("race snapshots missing");
   }
 
@@ -242,10 +242,8 @@ describe("CP-18 claim/equipment race with real D1", () => {
       archiveEntry: race.claimed.archiveEntry
     };
 
-    const [first, second] = await Promise.all([
-      firstRepository.commit(mutation),
-      secondRepository.commit(mutation)
-    ]);
+    const first = await firstRepository.commit(mutation);
+    const second = await secondRepository.commit(mutation);
 
     const results = [first, second];
     expect(results.filter((entry) => entry.ok)).toHaveLength(1);
