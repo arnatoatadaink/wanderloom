@@ -193,6 +193,33 @@ describe("CP-09 D1 atomic claim mutation", () => {
     expect(prepared[5]?.query).toContain("DELETE FROM player_mutation_guards");
   });
 
+  it("throws instead of reporting success when a guarded claim batch is incomplete", async () => {
+    const db: D1AtomicDatabaseLike = {
+      prepare(query) {
+        return new FakeStatement(query, () => null);
+      },
+      async batch() {
+        return [
+          { meta: { changes: 1 } },
+          { meta: { changes: 1 } },
+          { meta: { changes: 0 } },
+          { meta: { changes: 1 } },
+          { meta: { changes: 0 } },
+          { meta: { changes: 1 } }
+        ];
+      }
+    };
+
+    const repository = new D1AtomicMutationRepository(db, {
+      recentArchiveRetention: 3,
+      guardTokenFactory: () => "guard-partial"
+    });
+
+    await expect(repository.commit(makeMutation())).rejects.toThrow(
+      "atomic claim invariant violated after mutation guard acquisition"
+    );
+  });
+
   it("returns already_claimed when a retry sees the archive entry", async () => {
     const mutation = makeMutation();
     const db: D1AtomicDatabaseLike = {
