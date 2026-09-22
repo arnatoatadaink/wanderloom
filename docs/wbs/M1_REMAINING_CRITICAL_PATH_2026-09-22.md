@@ -22,7 +22,7 @@ Formal failure/loss tuning and long-term growth balancing remain outside the M1 
 
 ## Re-sequenced Critical Path
 
-### CP-14 — M1 reward/drop contract
+### CP-14 — M1 reward/drop contract — implementation complete; validation pending
 
 Primary WBS mapping:
 
@@ -223,4 +223,4 @@ These should remain in the WBS but must not delay CP-14 through CP-19.
 
 ## Immediate next action
 
-Start CP-14 by fixing the minimum reward/drop domain contract before choosing final balance numbers.
+Validate CP-14 in WSL. After successful validation, close CP-14 and start CP-15 seeded M1 resolution with a real drop.
