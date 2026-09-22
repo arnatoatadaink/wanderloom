@@ -6,7 +6,7 @@ import {
   remainingSeconds
 } from "./view-model";
 
-describe("CP-11 view model", () => {
+describe("CP-11/17 view model", () => {
   it("chooses the first zone and duration", () => {
     expect(
       chooseInitialSelection([
