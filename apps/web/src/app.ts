@@ -272,9 +272,9 @@ export class WanderloomApp {
       </div>
 
       <div class="metrics-grid">
-        <div><span>Mode</span><strong>Solo</strong></div>
-        <div><span>Network</span><strong>Low-bandwidth</strong></div>
-        <div><span>Fixture</span><strong>M1 smoke</strong></div>
+        <div><span>Gold</span><strong>${duration ? formatRange(duration.preview.gold.min, duration.preview.gold.max) : "—"}</strong></div>
+        <div><span>EXP</span><strong>${duration ? formatRange(duration.preview.exp.min, duration.preview.exp.max) : "—"}</strong></div>
+        <div><span>Drops</span><strong>${duration ? formatRange(duration.preview.drops.minItems, duration.preview.drops.maxItems) : "—"}</strong></div>
       </div>
 
       <button
@@ -448,4 +448,8 @@ function escapeHtml(value: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function formatRange(min: number, max: number): string {
+  return min === max ? String(min) : `${min}–${max}`;
 }
