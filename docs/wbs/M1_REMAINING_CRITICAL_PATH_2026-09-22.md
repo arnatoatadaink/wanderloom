@@ -22,7 +22,7 @@ Formal failure/loss tuning and long-term growth balancing remain outside the M1 
 
 ## Re-sequenced Critical Path
 
-### CP-14 — M1 reward/drop contract — implementation complete; validation pending
+### CP-14 — M1 reward/drop contract — complete
 
 Primary WBS mapping:
 
@@ -51,7 +51,7 @@ Equipment cannot be implemented safely until a claimed item has an explicit doma
 
 ---
 
-### CP-15 — Seeded M1 resolution with real drop
+### CP-15 — Seeded M1 resolution with real drop — implementation complete; validation pending
 
 Primary WBS mapping:
 
@@ -223,4 +223,4 @@ These should remain in the WBS but must not delay CP-14 through CP-19.
 
 ## Immediate next action
 
-Validate CP-14 in WSL. After successful validation, close CP-14 and start CP-15 seeded M1 resolution with a real drop.
+Validate CP-15 in WSL. After successful validation, close CP-15 and start CP-16 Equipment domain + atomic persistence/API.
