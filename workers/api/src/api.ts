@@ -1,7 +1,11 @@
 import {
   calculateClaim,
+  instantiateDrop,
+  resolveSeededM1Exploration,
+  type ActiveExploration,
   type ExplorationId,
   type ExplorationResolution,
+  type ItemInstanceId,
   type PlayerId,
   type ZoneId
 } from "@wanderloom/game-core";
@@ -29,12 +33,15 @@ export interface ApiRuntime {
   readonly createExplorationId: () => ExplorationId;
   readonly createClaimNonce: () => string;
   readonly createSeed: () => string;
+  readonly createItemInstanceId: () => ItemInstanceId;
   readonly resolveDurationMs: (
     zoneId: ZoneId,
     durationId: string
   ) => number | null;
   readonly resolveExploration: (
-    explorationId: ExplorationId
+    exploration: ActiveExploration,
+    claimedAt: string,
+    createItemInstanceId: () => ItemInstanceId
   ) => ExplorationResolution | null;
   readonly recentArchiveRetention: number | null;
 }
@@ -45,8 +52,30 @@ const defaultRuntime: ApiRuntime = {
   createExplorationId: () => crypto.randomUUID() as ExplorationId,
   createClaimNonce: () => crypto.randomUUID(),
   createSeed: () => crypto.randomUUID(),
+  createItemInstanceId: () => crypto.randomUUID() as ItemInstanceId,
   resolveDurationMs: resolveM1SmokeDurationMs,
-  resolveExploration: resolveM1SmokeExploration,
+  resolveExploration: (exploration, claimedAt, createItemInstanceId) => {
+    const resolved = resolveSeededM1Exploration({
+      seed: exploration.seed,
+      explorationId: exploration.explorationId,
+      zoneId: exploration.zoneId,
+      durationId: exploration.durationId
+    });
+
+    return {
+      result: resolved.result,
+      gold: resolved.gold,
+      exp: resolved.exp,
+      drops: resolved.generatedDrops.map((generatedDrop) =>
+        instantiateDrop({
+          generatedDrop,
+          itemInstanceId: createItemInstanceId(),
+          createdAt: claimedAt
+        })
+      ),
+      summaryMetrics: resolved.summaryMetrics
+    };
+  },
   recentArchiveRetention: M1_SMOKE_RECENT_ARCHIVE_RETENTION
 };
 
@@ -244,7 +273,12 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           );
         }
 
-        const resolution = runtime.resolveExploration(requestedExplorationId);
+        const claimedAt = runtime.now();
+        const resolution = runtime.resolveExploration(
+          exploration,
+          claimedAt,
+          runtime.createItemInstanceId
+        );
         if (resolution === null) {
           return notReady("exploration_resolution");
         }
@@ -254,7 +288,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           inventory,
           exploration,
           resolution,
-          claimedAt: runtime.now()
+          claimedAt
         });
         if (!calculated.ok) {
           return json(
