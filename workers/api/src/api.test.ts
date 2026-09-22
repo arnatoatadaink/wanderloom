@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ExplorationId, PlayerId } from "@wanderloom/game-core";
+import type { ExplorationId, ItemInstanceId, PlayerId } from "@wanderloom/game-core";
 import { createApi, type ApiDatabase } from "./api";
 
 class FakeStatement {
@@ -48,6 +48,7 @@ describe("CP-10 API wiring", () => {
       createExplorationId: () => "exploration-test" as ExplorationId,
       createClaimNonce: () => "nonce-test",
       createSeed: () => "seed-test",
+      createItemInstanceId: () => "item-test" as ItemInstanceId,
       resolveDurationMs: () => null,
       resolveExploration: () => null,
       recentArchiveRetention: null
