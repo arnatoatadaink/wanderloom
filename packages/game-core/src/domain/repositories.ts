@@ -58,6 +58,13 @@ export interface CoreOnlyAtomicMutation {
   readonly nextCore: PlayerCoreSnapshot;
 }
 
+export interface InventoryOnlyAtomicMutation {
+  readonly kind: "inventory";
+  readonly playerId: PlayerId;
+  readonly expectedInventoryStateVersion: number;
+  readonly nextInventory: PlayerInventorySnapshot;
+}
+
 export interface CoreInventoryAtomicMutation {
   readonly kind: "core_inventory";
   readonly playerId: PlayerId;
@@ -80,6 +87,7 @@ export interface ClaimAtomicMutation {
 
 export type AtomicMutation =
   | CoreOnlyAtomicMutation
+  | InventoryOnlyAtomicMutation
   | CoreInventoryAtomicMutation
   | ClaimAtomicMutation;
 
