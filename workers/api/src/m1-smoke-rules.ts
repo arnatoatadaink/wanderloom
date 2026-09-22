@@ -1,6 +1,4 @@
 import type {
-  ExplorationId,
-  ExplorationResolution,
   RewardPreview,
   ZoneId
 } from "@wanderloom/game-core";
@@ -47,14 +45,3 @@ export function resolveM1SmokeDurationMs(
   return duration?.durationMs ?? null;
 }
 
-export function resolveM1SmokeExploration(
-  _explorationId: ExplorationId
-): ExplorationResolution {
-  return {
-    result: "success",
-    gold: 5,
-    exp: 10,
-    drops: [],
-    summaryMetrics: {}
-  };
-}
