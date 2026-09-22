@@ -1,6 +1,21 @@
+export interface RewardRangeDto {
+  readonly min: number;
+  readonly max: number;
+}
+
+export interface RewardPreviewDto {
+  readonly gold: RewardRangeDto;
+  readonly exp: RewardRangeDto;
+  readonly drops: {
+    readonly minItems: number;
+    readonly maxItems: number;
+  };
+}
+
 export interface ZoneDurationDto {
   readonly durationId: string;
   readonly durationMs: number;
+  readonly preview: RewardPreviewDto;
 }
 
 export interface ZoneDto {
@@ -27,9 +42,15 @@ export interface CoreDto {
   readonly activeExploration: ActiveExplorationDto | null;
 }
 
+export interface ItemDto {
+  readonly itemInstanceId: string;
+  readonly itemDefinitionId: string;
+  readonly createdAt: string;
+}
+
 export interface InventoryDto {
   readonly stateVersion: number;
-  readonly items: readonly unknown[];
+  readonly items: readonly ItemDto[];
 }
 
 export interface ClaimResultDto {
@@ -40,7 +61,7 @@ export interface ClaimResultDto {
     readonly rewards: {
       readonly gold: number;
       readonly exp: number;
-      readonly drops: readonly unknown[];
+      readonly drops: readonly ItemDto[];
     };
   };
 }
