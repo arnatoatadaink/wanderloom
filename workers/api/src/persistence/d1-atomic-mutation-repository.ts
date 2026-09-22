@@ -5,6 +5,7 @@ import {
   type AtomicMutationRepository,
   type ClaimAtomicMutation,
   type InvalidExplorationState,
+  type InventoryOnlyAtomicMutation,
   type MutationResult,
   type PlayerCoreSnapshot,
   type VersionConflict
@@ -63,13 +64,68 @@ export class D1AtomicMutationRepository implements AtomicMutationRepository {
   async commit(
     mutation: Parameters<AtomicMutationRepository["commit"]>[0]
   ): ReturnType<AtomicMutationRepository["commit"]> {
-    if (mutation.kind !== "claim") {
-      throw new Error(
-        `D1AtomicMutationRepository CP-09 only implements claim mutations; received ${mutation.kind}`
+    if (mutation.kind === "inventory") {
+      return this.commitInventory(mutation);
+    }
+    if (mutation.kind === "claim") {
+      return this.commitClaim(mutation);
+    }
+    throw new Error(`unsupported atomic mutation kind: ${mutation.kind}`);
+  }
+
+  private async commitInventory(
+    mutation: InventoryOnlyAtomicMutation
+  ): Promise<MutationResult<AtomicMutationCommit>> {
+    const update = this.db
+      .prepare(
+        `UPDATE player_inventory
+         SET schema_version = ?2,
+             state_version = ?3,
+             snapshot_json = ?4,
+             updated_at = ?5
+         WHERE player_id = ?1
+           AND state_version = ?6`
+      )
+      .bind(
+        mutation.playerId,
+        mutation.nextInventory.schemaVersion,
+        mutation.nextInventory.stateVersion,
+        JSON.stringify(mutation.nextInventory),
+        mutation.nextInventory.updatedAt,
+        mutation.expectedInventoryStateVersion
       );
+
+    const [result] = await this.db.batch([update]);
+    if ((result?.meta?.changes ?? 0) !== 1) {
+      const inventory = await this.db
+        .prepare(
+          `SELECT state_version
+           FROM player_inventory
+           WHERE player_id = ?1
+           LIMIT 1`
+        )
+        .bind(mutation.playerId)
+        .first<InventoryConflictRow>();
+      if (inventory === null) throw new Error("inventory snapshot missing");
+      return {
+        ok: false,
+        error: {
+          code: "version_conflict",
+          snapshot: "inventory",
+          expectedVersion: mutation.expectedInventoryStateVersion,
+          actualVersion: inventory.state_version
+        }
+      };
     }
 
-    return this.commitClaim(mutation);
+    return {
+      ok: true,
+      value: {
+        coreStateVersion: 0,
+        inventoryStateVersion: mutation.nextInventory.stateVersion,
+        explorationId: null
+      }
+    };
   }
 
   private async commitClaim(
