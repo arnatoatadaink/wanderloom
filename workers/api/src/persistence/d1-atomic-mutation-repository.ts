@@ -121,7 +121,7 @@ export class D1AtomicMutationRepository implements AtomicMutationRepository {
     return {
       ok: true,
       value: {
-        coreStateVersion: 0,
+        coreStateVersion: null,
         inventoryStateVersion: mutation.nextInventory.stateVersion,
         explorationId: null
       }
