@@ -406,6 +406,27 @@ describe("CP-12 playable loop with real D1", () => {
       }
     });
 
+    const invalidSlotResponse = await api.fetch(
+      request("/api/equipment", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          slot: "weapon",
+          itemInstanceId: "item-instance-cp15",
+          expectedInventoryStateVersion: 2
+        })
+      }),
+      { DB: db }
+    );
+    expect(invalidSlotResponse.status).toBe(400);
+    await expect(invalidSlotResponse.json()).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "invalid_equipment_slot",
+        slot: "weapon"
+      }
+    });
+
     const unownedEquipResponse = await api.fetch(
       request("/api/equipment", {
         method: "POST",
