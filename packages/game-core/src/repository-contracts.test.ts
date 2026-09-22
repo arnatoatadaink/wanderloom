@@ -82,16 +82,25 @@ describe("C-002 repository interfaces", () => {
       async commit(
         mutation: AtomicMutation
       ): Promise<MutationResult<AtomicMutationCommit>> {
+        const coreStateVersion =
+          mutation.kind === "inventory"
+            ? null
+            : mutation.nextCore.stateVersion;
+        const inventoryStateVersion =
+          mutation.kind === "core"
+            ? null
+            : mutation.nextInventory.stateVersion;
+        const committedExplorationId =
+          mutation.kind === "claim"
+            ? mutation.archiveEntry.explorationId
+            : null;
+
         return {
           ok: true,
           value: {
-            coreStateVersion: mutation.nextCore.stateVersion,
-            inventoryStateVersion:
-              mutation.kind === "core"
-                ? null
-                : mutation.nextInventory.stateVersion,
-            explorationId:
-              mutation.kind === "claim" ? mutation.archiveEntry.explorationId : null
+            coreStateVersion,
+            inventoryStateVersion,
+            explorationId: committedExplorationId
           }
         };
       }
