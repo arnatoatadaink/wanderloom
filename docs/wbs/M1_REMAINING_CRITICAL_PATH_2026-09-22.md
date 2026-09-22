@@ -114,7 +114,7 @@ This closes M1 DoD item 9 at the backend/domain boundary.
 
 ---
 
-### CP-17 — Inventory / equipment minimum UI
+### CP-17 — Inventory / equipment minimum UI — implementation complete; validation pending
 
 Primary WBS mapping:
 
@@ -223,4 +223,4 @@ These should remain in the WBS but must not delay CP-14 through CP-19.
 
 ## Immediate next action
 
-Start CP-17 Inventory/equipment minimum UI.
+Validate CP-17 in WSL. After successful validation, close CP-17 and start CP-18 Claim/equipment race and failure validation.
