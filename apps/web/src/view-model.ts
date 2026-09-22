@@ -2,6 +2,7 @@ import type {
   ActiveExplorationDto,
   ClaimResultDto,
   CoreDto,
+  InventoryDto,
   ZoneDto
 } from "./api-client";
 
@@ -19,6 +20,7 @@ export interface AppViewModel {
   readonly selectedZoneId: string | null;
   readonly selectedDurationId: string | null;
   readonly core: CoreDto | null;
+  readonly inventory: InventoryDto | null;
   readonly exploration: ActiveExplorationDto | null;
   readonly result: ClaimResultDto | null;
   readonly busy: boolean;
@@ -32,6 +34,7 @@ export function initialViewModel(): AppViewModel {
     selectedZoneId: null,
     selectedDurationId: null,
     core: null,
+    inventory: null,
     exploration: null,
     result: null,
     busy: false,
