@@ -226,6 +226,65 @@ describe("CP-18 claim/equipment race with real D1", () => {
     ]);
   });
 
+  it("allows exactly one of two competing claims and classifies the other as already claimed", async () => {
+    const race = await prepareRace("player-cp18-double-claim");
+    const firstRepository = atomic(race.db);
+    const secondRepository = atomic(race.db);
+    const mutation = {
+      kind: "claim" as const,
+      playerId: race.playerId,
+      claimNonce: "player-cp18-double-claim-nonce",
+      expectedCoreStateVersion: race.claimed.previousCoreStateVersion,
+      nextCore: race.claimed.nextCore,
+      expectedInventoryStateVersion:
+        race.claimed.previousInventoryStateVersion,
+      nextInventory: race.claimed.nextInventory,
+      archiveEntry: race.claimed.archiveEntry
+    };
+
+    const [first, second] = await Promise.all([
+      firstRepository.commit(mutation),
+      secondRepository.commit(mutation)
+    ]);
+
+    const results = [first, second];
+    expect(results.filter((entry) => entry.ok)).toHaveLength(1);
+    expect(
+      results.filter((entry) => !entry.ok).map((entry) =>
+        entry.ok ? null : entry.error.code
+      )
+    ).toEqual(["already_claimed"]);
+
+    const finalInventory = await race.inventoryRepository.findByPlayerId(
+      race.playerId
+    );
+    expect(finalInventory?.items.map((entry) => entry.itemInstanceId)).toEqual([
+      race.item.itemInstanceId,
+      race.drop.itemInstanceId
+    ]);
+
+    const archiveCount = await race.db
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM recent_archive
+         WHERE player_id = ?1
+           AND exploration_id = ?2`
+      )
+      .bind(race.playerId, race.claimed.archiveEntry.explorationId)
+      .first<{ count: number }>();
+    expect(archiveCount?.count).toBe(1);
+
+    // Retrying the same committed mutation models a client whose successful
+    // response was lost after D1 committed the claim.
+    const lostResponseRetry = await atomic(race.db).commit(mutation);
+    expect(lostResponseRetry).toMatchObject({
+      ok: false,
+      error: {
+        code: "already_claimed"
+      }
+    });
+  });
+
   it("preserves claimed drop when claim wins and equipment retries from fresh inventory", async () => {
     const race = await prepareRace("player-cp18-claim-first");
     const repository = atomic(race.db);
