@@ -1,5 +1,6 @@
 import {
   calculateClaim,
+  equipItem,
   instantiateDrop,
   resolveSeededM1Exploration,
   type ActiveExploration,
@@ -330,7 +331,72 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
       }
 
       if (method === "POST" && url.pathname === "/api/equipment") {
-        return notReady("equipment_mutation");
+        const inventory = await inventoryRepository.findByPlayerId(playerId);
+        if (inventory === null) {
+          return json({ ok: false, error: { code: "player_not_found" } }, 404);
+        }
+
+        const body = (await request.json()) as {
+          readonly slot?: string;
+          readonly itemInstanceId?: string;
+          readonly expectedInventoryStateVersion?: number;
+        };
+        if (
+          !body.slot ||
+          !body.itemInstanceId ||
+          !Number.isInteger(body.expectedInventoryStateVersion)
+        ) {
+          return json({ ok: false, error: { code: "invalid_request" } }, 400);
+        }
+
+        const itemInstanceId = body.itemInstanceId as ItemInstanceId;
+        if (inventory.equipment.slots[body.slot] === itemInstanceId) {
+          return json({ ok: true, inventory, idempotent: true });
+        }
+
+        if (inventory.stateVersion !== body.expectedInventoryStateVersion) {
+          return json({
+            ok: false,
+            error: {
+              code: "version_conflict",
+              snapshot: "inventory",
+              expectedVersion: body.expectedInventoryStateVersion,
+              actualVersion: inventory.stateVersion
+            }
+          }, 409);
+        }
+
+        const equipped = equipItem({
+          inventory,
+          slot: body.slot,
+          itemInstanceId,
+          equippedAt: runtime.now()
+        });
+        if (!equipped.ok) {
+          return json({ ok: false, error: equipped.error }, 400);
+        }
+
+        const atomicRepository = new D1AtomicMutationRepository(env.DB, {
+          recentArchiveRetention: runtime.recentArchiveRetention ?? 1
+        });
+        const committed = await atomicRepository.commit({
+          kind: "inventory",
+          playerId,
+          expectedInventoryStateVersion:
+            equipped.value.previousInventoryStateVersion,
+          nextInventory: equipped.value.nextInventory
+        });
+
+        return committed.ok
+          ? json({
+              ok: true,
+              inventory: equipped.value.nextInventory,
+              idempotent: false
+            })
+          : json(
+              { ok: false, error: committed.error },
+              mutationErrorStatus(committed.error.code)
+            );
       }
 
       return json(
