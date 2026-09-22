@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-15-seeded-m1-resolution`. WSL validation is pending.
+Implementation and WSL validation complete on `feat/cp-15-seeded-m1-resolution`.
 
 ## Objective
 
@@ -111,19 +111,30 @@ CP-15 does not define:
 
 Those are not required to prove the CP-15 real-drop boundary.
 
-## Validation target
+## Validation result
 
-Run in WSL:
+WSL validation passed:
 
-```bash
-git fetch
-git switch feat/cp-15-seeded-m1-resolution
+- workspace typecheck: passed
+  - `packages/game-core`
+  - `apps/web`
+  - `workers/api`
+- workspace tests: passed
+  - `packages/game-core`: 20 tests across 10 files
+  - `apps/web`: 6 tests across 3 files
+  - `workers/api`: 15 tests across 7 files
+- workspace build: passed
+  - `game-core` TypeScript build
+  - web Vite build
+  - Wrangler dry-run build
+- Worker dry-run upload: 28.99 KiB / gzip 5.70 KiB
+- web dist measurement:
+  - total raw: 15,118 bytes
+  - total gzip: 5,225 bytes
+  - JavaScript gzip: 3,551 bytes
+  - CSS gzip: 1,411 bytes
+  - HTML gzip: 263 bytes
+- CP-13 web payload budgets remain satisfied
+- `git diff --check`: passed
 
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm --filter @wanderloom/web measure:dist
-git diff --check
-```
-
-After successful validation, CP-15 can be closed and CP-16 Equipment domain + atomic persistence/API can begin.
+CP-15 is closed. CP-16 Equipment domain + atomic persistence/API is next.
