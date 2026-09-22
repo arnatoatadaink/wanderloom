@@ -5,8 +5,11 @@ import {
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
+  instantiateDrop,
   measureJsonUtf8,
+  resolveSeededM1Exploration,
   type ExplorationId,
+  type ItemInstanceId,
   type PlayerId
 } from "@wanderloom/game-core";
 import {
@@ -44,15 +47,31 @@ const runtime: ApiRuntime = {
   },
   createClaimNonce: () => `nonce-${explorationSequence + 1}`,
   createSeed: () => `seed-${explorationSequence + 1}`,
+  createItemInstanceId: () => "item-instance-cp15" as ItemInstanceId,
   resolveDurationMs: (_zoneId, durationId) =>
     durationId === "short" ? 300_000 : null,
-  resolveExploration: () => ({
-    result: "success",
-    gold: 5,
-    exp: 10,
-    drops: [],
-    summaryMetrics: {}
-  }),
+  resolveExploration: (exploration, claimedAt, createItemInstanceId) => {
+    const resolved = resolveSeededM1Exploration({
+      seed: exploration.seed,
+      explorationId: exploration.explorationId,
+      zoneId: exploration.zoneId,
+      durationId: exploration.durationId
+    });
+
+    return {
+      result: resolved.result,
+      gold: resolved.gold,
+      exp: resolved.exp,
+      drops: resolved.generatedDrops.map((generatedDrop) =>
+        instantiateDrop({
+          generatedDrop,
+          itemInstanceId: createItemInstanceId(),
+          createdAt: claimedAt
+        })
+      ),
+      summaryMetrics: resolved.summaryMetrics
+    };
+  },
   recentArchiveRetention: 3
 };
 
@@ -186,11 +205,21 @@ describe("CP-12 playable loop with real D1", () => {
       };
       readonly inventory: {
         readonly stateVersion: number;
+        readonly items: readonly {
+          readonly itemInstanceId: string;
+          readonly itemDefinitionId: string;
+          readonly createdAt: string;
+        }[];
       };
       readonly archiveEntry: {
         readonly rewards: {
           readonly gold: number;
           readonly exp: number;
+          readonly drops: readonly {
+            readonly itemInstanceId: string;
+            readonly itemDefinitionId: string;
+            readonly createdAt: string;
+          }[];
         };
       };
     };
@@ -198,13 +227,21 @@ describe("CP-12 playable loop with real D1", () => {
     expect(claimed.core.stateVersion).toBe(2);
     expect(claimed.inventory.stateVersion).toBe(1);
     expect(claimed.core.progression).toMatchObject({
-      gold: 5,
+      gold: 6,
       exp: 10
     });
     expect(claimed.core.activeExploration).toBeNull();
+    expect(claimed.inventory.items).toEqual([
+      {
+        itemInstanceId: "item-instance-cp15",
+        itemDefinitionId: "m1-wayfarer-charm",
+        createdAt: "2026-09-21T00:05:01.000Z"
+      }
+    ]);
     expect(claimed.archiveEntry.rewards).toMatchObject({
-      gold: 5,
-      exp: 10
+      gold: 6,
+      exp: 10,
+      drops: claimed.inventory.items
     });
     expect(measureJsonUtf8(claimed.core).bytes).toBeLessThanOrEqual(
       CP13_SNAPSHOT_BUDGET_BYTES.core
@@ -228,7 +265,7 @@ describe("CP-12 playable loop with real D1", () => {
       core: {
         stateVersion: 2,
         progression: {
-          gold: 5,
+          gold: 6,
           exp: 10
         },
         activeExploration: null
@@ -273,10 +310,27 @@ describe("CP-12 playable loop with real D1", () => {
       core: {
         stateVersion: 2,
         progression: {
-          gold: 5,
+          gold: 6,
           exp: 10
         },
         activeExploration: null
+      }
+    });
+
+    const inventoryAfterDuplicateResponse = await api.fetch(
+      request("/api/inventory"),
+      { DB: db }
+    );
+    await expect(inventoryAfterDuplicateResponse.json()).resolves.toMatchObject({
+      ok: true,
+      inventory: {
+        stateVersion: 1,
+        items: [
+          {
+            itemInstanceId: "item-instance-cp15",
+            itemDefinitionId: "m1-wayfarer-charm"
+          }
+        ]
       }
     });
 
