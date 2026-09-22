@@ -24,9 +24,9 @@ export const M1_SMOKE_ZONES: readonly M1ZoneDefinition[] = [
         durationId: "short",
         durationMs: 300_000,
         preview: {
-          gold: { min: 5, max: 5 },
+          gold: { min: 5, max: 6 },
           exp: { min: 10, max: 10 },
-          drops: { minItems: 0, maxItems: 0 }
+          drops: { minItems: 1, maxItems: 1 }
         }
       }
     ]
