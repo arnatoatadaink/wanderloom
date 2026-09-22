@@ -37,9 +37,10 @@ export class WanderloomApp {
         this.api.setPlayerId(storedPlayerId);
       }
 
-      const [zones, core, exploration] = await Promise.all([
+      const [zones, core, inventory, exploration] = await Promise.all([
         this.api.getZones(),
         this.api.getState(),
+        this.api.getInventory(),
         this.api.getCurrentExploration()
       ]);
       const selection = chooseInitialSelection(zones);
@@ -52,6 +53,7 @@ export class WanderloomApp {
         selectedDurationId:
           exploration?.durationId ?? selection.durationId,
         core,
+        inventory,
         exploration,
         result: null,
         errorMessage: null
@@ -142,8 +144,36 @@ export class WanderloomApp {
         busy: false,
         phase: "result",
         core: result.core,
+        inventory: result.inventory,
         exploration: null,
         result,
+        errorMessage: null
+      };
+      this.render();
+    } catch (error) {
+      this.fail(error);
+    }
+  }
+
+  private async equip(itemInstanceId: string): Promise<void> {
+    const inventory = this.state.inventory;
+    if (inventory === null) {
+      return;
+    }
+
+    this.state = { ...this.state, busy: true, errorMessage: null };
+    this.render();
+
+    try {
+      const nextInventory = await this.api.equipItem(
+        "charm",
+        itemInstanceId,
+        inventory.stateVersion
+      );
+      this.state = {
+        ...this.state,
+        busy: false,
+        inventory: nextInventory,
         errorMessage: null
       };
       this.render();
@@ -277,6 +307,8 @@ export class WanderloomApp {
         <div><span>Drops</span><strong>${duration ? formatRange(duration.preview.drops.minItems, duration.preview.drops.maxItems) : "—"}</strong></div>
       </div>
 
+      ${this.renderInventory()}
+
       <button
         id="start-expedition"
         class="primary-action"
@@ -356,6 +388,8 @@ export class WanderloomApp {
         </div>
       </div>
 
+      ${this.renderInventory()}
+
       <p class="hint">
         This result currently uses the provisional M1 smoke rules.
       </p>
@@ -366,6 +400,55 @@ export class WanderloomApp {
     `;
   }
 
+  private renderInventory(): string {
+    const inventory = this.state.inventory;
+    if (inventory === null) {
+      return "";
+    }
+
+    const equipped = inventory.equipment.slots.charm ?? null;
+    if (inventory.items.length === 0) {
+      return `
+        <div class="inventory-panel">
+          <div class="inventory-heading">
+            <span>Inventory</span>
+            <strong>Charm</strong>
+          </div>
+          <p class="hint">No items yet.</p>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="inventory-panel">
+        <div class="inventory-heading">
+          <span>Inventory</span>
+          <strong>Charm slot</strong>
+        </div>
+        <div class="inventory-list">
+          ${inventory.items.map((item) => {
+            const isEquipped = equipped === item.itemInstanceId;
+            return `
+              <div class="inventory-item">
+                <div>
+                  <strong>${escapeHtml(item.itemDefinitionId)}</strong>
+                  <small>${escapeHtml(item.itemInstanceId.slice(0, 12))}</small>
+                </div>
+                <button
+                  class="secondary-action inventory-action"
+                  type="button"
+                  data-equip-item-id="${escapeHtml(item.itemInstanceId)}"
+                  ${this.state.busy || isEquipped ? "disabled" : ""}
+                >
+                  ${isEquipped ? "Equipped" : "Equip"}
+                </button>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }
   private renderError(): string {
     return `
       <div class="center-state">
@@ -413,6 +496,17 @@ export class WanderloomApp {
     this.root
       .querySelector("#claim-expedition")
       ?.addEventListener("click", () => void this.claim());
+
+    this.root.querySelectorAll<HTMLElement>("[data-equip-item-id]").forEach(
+      (element) => {
+        element.addEventListener("click", () => {
+          const itemInstanceId = element.dataset.equipItemId;
+          if (itemInstanceId) {
+            void this.equip(itemInstanceId);
+          }
+        });
+      }
+    );
 
     this.root
       .querySelector("#explore-again")
