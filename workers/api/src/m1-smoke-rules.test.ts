@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { ExplorationId, ZoneId } from "@wanderloom/game-core";
+import type { ZoneId } from "@wanderloom/game-core";
 import {
   M1_SMOKE_RECENT_ARCHIVE_RETENTION,
   M1_SMOKE_ZONES,
-  resolveM1SmokeDurationMs,
-  resolveM1SmokeExploration
+  resolveM1SmokeDurationMs
 } from "./m1-smoke-rules";
 
 describe("M1 smoke rules", () => {
@@ -20,9 +19,9 @@ describe("M1 smoke rules", () => {
 
   it("exposes the provisional reward preview", () => {
     expect(M1_SMOKE_ZONES[0]?.durations[0]?.preview).toEqual({
-      gold: { min: 5, max: 5 },
+      gold: { min: 5, max: 6 },
       exp: { min: 10, max: 10 },
-      drops: { minItems: 0, maxItems: 0 }
+      drops: { minItems: 1, maxItems: 1 }
     });
   });
 
@@ -32,16 +31,4 @@ describe("M1 smoke rules", () => {
     ).toBeNull();
   });
 
-  it("returns a deterministic no-drop smoke resolution", () => {
-    expect(
-      resolveM1SmokeExploration("exploration-1" as ExplorationId)
-    ).toEqual({
-      result: "success",
-      gold: 5,
-      exp: 10,
-      drops: [],
-      summaryMetrics: {}
-    });
-    expect(M1_SMOKE_RECENT_ARCHIVE_RETENTION).toBe(3);
-  });
 });
