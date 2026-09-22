@@ -334,6 +334,115 @@ describe("CP-12 playable loop with real D1", () => {
       }
     });
 
+    nowValue = "2026-09-21T00:05:30.000Z";
+
+    const equipResponse = await api.fetch(
+      request("/api/equipment", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          slot: "charm",
+          itemInstanceId: "item-instance-cp15",
+          expectedInventoryStateVersion: 1
+        })
+      }),
+      { DB: db }
+    );
+    expect(equipResponse.status).toBe(200);
+    await expect(equipResponse.json()).resolves.toMatchObject({
+      ok: true,
+      idempotent: false,
+      inventory: {
+        stateVersion: 2,
+        equipment: {
+          slots: {
+            charm: "item-instance-cp15"
+          }
+        }
+      }
+    });
+
+    const equipRetryResponse = await api.fetch(
+      request("/api/equipment", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          slot: "charm",
+          itemInstanceId: "item-instance-cp15",
+          expectedInventoryStateVersion: 1
+        })
+      }),
+      { DB: db }
+    );
+    expect(equipRetryResponse.status).toBe(200);
+    await expect(equipRetryResponse.json()).resolves.toMatchObject({
+      ok: true,
+      idempotent: true,
+      inventory: {
+        stateVersion: 2
+      }
+    });
+
+    const staleEquipResponse = await api.fetch(
+      request("/api/equipment", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          slot: "charm",
+          itemInstanceId: "missing-item",
+          expectedInventoryStateVersion: 1
+        })
+      }),
+      { DB: db }
+    );
+    expect(staleEquipResponse.status).toBe(409);
+    await expect(staleEquipResponse.json()).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "version_conflict",
+        snapshot: "inventory",
+        expectedVersion: 1,
+        actualVersion: 2
+      }
+    });
+
+    const unownedEquipResponse = await api.fetch(
+      request("/api/equipment", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          slot: "charm",
+          itemInstanceId: "missing-item",
+          expectedInventoryStateVersion: 2
+        })
+      }),
+      { DB: db }
+    );
+    expect(unownedEquipResponse.status).toBe(400);
+    await expect(unownedEquipResponse.json()).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "item_not_owned",
+        itemInstanceId: "missing-item"
+      }
+    });
+
+    const equippedInventoryResponse = await api.fetch(
+      request("/api/inventory"),
+      { DB: db }
+    );
+    await expect(equippedInventoryResponse.json()).resolves.toMatchObject({
+      ok: true,
+      inventory: {
+        stateVersion: 2,
+        equipment: {
+          slots: {
+            charm: "item-instance-cp15"
+          }
+        }
+      }
+    });
+
     nowValue = "2026-09-21T00:06:00.000Z";
 
     const restartResponse = await api.fetch(
