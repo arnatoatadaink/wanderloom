@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-16-equipment-domain-api`. WSL validation is pending.
+Implementation and WSL validation complete on `feat/cp-16-equipment-domain-api`.
 
 ## Objective
 
@@ -123,19 +123,24 @@ It does not yet prove simultaneous claim/equip behavior. That remains CP-18 by d
 - existing claim path retained: integration coverage extended
 - simultaneous claim/equipment safety: deferred to CP-18
 
-## Validation target
+## Validation result
 
-Run in WSL:
+WSL validation passed:
 
-```bash
-git fetch
-git switch feat/cp-16-equipment-domain-api
+- workspace typecheck: passed
+  - `packages/game-core`
+  - `apps/web`
+  - `workers/api`
+- workspace tests: passed
+  - `packages/game-core`: 22 tests across 11 files
+  - `apps/web`: 6 tests across 3 files
+  - `workers/api`: 17 tests across 7 files
+- workspace build: passed
+  - web Vite build
+  - `game-core` TypeScript build
+  - Wrangler dry-run build
+- Worker dry-run upload: 33.28 KiB / gzip 6.18 KiB
+- web dist measurement remained within the existing CP-13 budget in the prior CP-16 validation run
+- `git diff --check`: passed
 
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm --filter @wanderloom/web measure:dist
-git diff --check
-```
-
-After successful validation, CP-16 can be closed and CP-17 Inventory/equipment minimum UI can begin.
+CP-16 is closed. CP-17 Inventory/equipment minimum UI is next.
