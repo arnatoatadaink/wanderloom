@@ -84,6 +84,70 @@ function makeMutation(): ClaimAtomicMutation {
   };
 }
 
+describe("CP-16 D1 inventory mutation", () => {
+  it("commits an inventory-only CAS update", async () => {
+    const mutation = makeMutation();
+    const db: D1AtomicDatabaseLike = {
+      prepare(query) {
+        return new FakeStatement(query, () => null);
+      },
+      async batch(statements) {
+        expect(statements).toHaveLength(1);
+        return [{ meta: { changes: 1 } }];
+      }
+    };
+    const repository = new D1AtomicMutationRepository(db, {
+      recentArchiveRetention: 3
+    });
+    const result = await repository.commit({
+      kind: "inventory",
+      playerId: mutation.playerId,
+      expectedInventoryStateVersion: 5,
+      nextInventory: mutation.nextInventory
+    });
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        coreStateVersion: 0,
+        inventoryStateVersion: 6,
+        explorationId: null
+      }
+    });
+  });
+
+  it("returns inventory version conflict on stale CAS", async () => {
+    const mutation = makeMutation();
+    const db: D1AtomicDatabaseLike = {
+      prepare(query) {
+        return new FakeStatement(query, (sql) =>
+          sql.includes("SELECT state_version") ? { state_version: 8 } : null
+        );
+      },
+      async batch() {
+        return [{ meta: { changes: 0 } }];
+      }
+    };
+    const repository = new D1AtomicMutationRepository(db, {
+      recentArchiveRetention: 3
+    });
+    const result = await repository.commit({
+      kind: "inventory",
+      playerId: mutation.playerId,
+      expectedInventoryStateVersion: 5,
+      nextInventory: mutation.nextInventory
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "version_conflict",
+        snapshot: "inventory",
+        expectedVersion: 5,
+        actualVersion: 8
+      }
+    });
+  });
+});
+
 describe("CP-09 D1 atomic claim mutation", () => {
   it("commits the six-statement guarded claim batch", async () => {
     const prepared: FakeStatement[] = [];
