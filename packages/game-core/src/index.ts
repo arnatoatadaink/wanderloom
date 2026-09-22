@@ -1,3 +1,4 @@
+export * from "./domain/equipment";
 export * from "./domain/archive";
 export * from "./domain/claim-calculation";
 export * from "./domain/core-snapshot";
