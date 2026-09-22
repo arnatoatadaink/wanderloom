@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-14-m1-reward-drop-contract`. WSL validation is pending.
+Implementation complete on `feat/cp-14-m1-reward-drop-contract`. WSL validation has passed for typecheck, tests, builds, and web bundle measurement; final `git diff --check` confirmation is pending.
 
 ## Objective
 
@@ -82,16 +82,30 @@ The ready screen now renders the server-provided Gold / EXP / drop-count preview
 
 CP-14 does not yet generate a real drop. That is CP-15.
 
-## Validation target
+## Validation result
 
-Run in WSL:
+WSL validation results recorded so far:
 
-```bash
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm --filter @wanderloom/web measure:dist
-git diff --check
-```
+- workspace typecheck: passed
+  - `packages/game-core`
+  - `apps/web`
+  - `workers/api`
+- workspace tests: passed
+  - `packages/game-core`: 18 tests across 9 files
+  - `apps/web`: 6 tests across 3 files
+  - `workers/api`: 16 tests across 7 files
+- workspace build: passed
+  - web Vite build
+  - `game-core` TypeScript build
+  - Wrangler dry-run build
+- Worker dry-run upload: 27.35 KiB / gzip 5.25 KiB
+- web dist measurement:
+  - total raw: 15,118 bytes
+  - total gzip: 5,225 bytes
+  - JavaScript gzip: 3,551 bytes
+  - CSS gzip: 1,411 bytes
+  - HTML gzip: 263 bytes
+- CP-13 web payload budgets remain satisfied
+- `git diff --check`: final confirmation pending
 
-The CP-13 payload budgets remain active and should continue to pass.
+After `git diff --check` passes, CP-14 can be closed and CP-15 can begin.
