@@ -1,34 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import type { ExplorationId } from "@wanderloom/game-core";
-
 import {
-  M1_SMOKE_RECENT_ARCHIVE_RETENTION,
-  resolveM1SmokeExploration
-} from "./m1-smoke-rules";
+  resolveSeededM1Exploration,
+  type ExplorationId,
+  type ZoneId
+} from "@wanderloom/game-core";
 
-describe("CP-13 provisional M1 smoke balance validation", () => {
-  it("keeps the validation fixture deterministic and linear", () => {
-    const single = resolveM1SmokeExploration("run-1" as ExplorationId);
-    const runs = 12;
+import { M1_SMOKE_RECENT_ARCHIVE_RETENTION } from "./m1-smoke-rules";
 
-    const projected = {
-      gold: single.gold * runs,
-      exp: single.exp * runs,
-      drops: single.drops.length * runs
-    };
+describe("CP-13/15 provisional M1 balance guard", () => {
+  it("keeps seeded rewards inside the published preview range", () => {
+    for (const seed of ["seed-a", "seed-b", "seed-c", "seed-d"]) {
+      const resolution = resolveSeededM1Exploration({
+        seed,
+        explorationId: "run-1" as ExplorationId,
+        zoneId: "m1-smoke-frontier" as ZoneId,
+        durationId: "short"
+      });
 
-    expect(single).toMatchObject({
-      result: "success",
-      gold: 5,
-      exp: 10,
-      drops: []
-    });
-    expect(projected).toEqual({
-      gold: 60,
-      exp: 120,
-      drops: 0
-    });
+      expect(resolution.gold).toBeGreaterThanOrEqual(5);
+      expect(resolution.gold).toBeLessThanOrEqual(6);
+      expect(resolution.exp).toBe(10);
+      expect(resolution.generatedDrops).toHaveLength(1);
+      expect(resolution.generatedDrops[0]?.itemDefinitionId).toBe(
+        "m1-wayfarer-charm"
+      );
+    }
+
     expect(M1_SMOKE_RECENT_ARCHIVE_RETENTION).toBe(3);
   });
 });
