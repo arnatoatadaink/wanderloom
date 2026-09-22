@@ -142,7 +142,7 @@ This closes M1 DoD item 9 at the user-visible boundary.
 
 ---
 
-### CP-18 — Claim/equipment race and failure validation
+### CP-18 — Claim/equipment race and failure validation — implementation complete; validation pending
 
 Primary WBS mapping:
 
@@ -223,4 +223,4 @@ These should remain in the WBS but must not delay CP-14 through CP-19.
 
 ## Immediate next action
 
-Start CP-18 Claim/equipment race and failure validation.
+Validate CP-18 in WSL. After successful validation, close CP-18 and start CP-19 Full M1 acceptance loop.
