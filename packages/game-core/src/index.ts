@@ -22,3 +22,5 @@ export * from "./domain/expedition-outcome";
 export * from "./domain/progression";
 
 export * from "./domain/rarity-zone-rewards";
+
+export * from "./domain/equipment-effects";
