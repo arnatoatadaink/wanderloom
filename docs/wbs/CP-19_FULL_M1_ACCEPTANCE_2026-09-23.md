@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-19-m1-acceptance-loop`. Final WSL validation is pending.
+Implementation and final WSL validation complete on `feat/cp-19-m1-acceptance-loop`.
 
 ## Objective
 
@@ -99,28 +99,30 @@ The following remain deferred and do not block CP-19:
 - Party/Caravan
 - long-term archive compaction
 
-## Final validation target
+## Final validation result
 
-Run in WSL:
+WSL final acceptance passed:
 
-```bash
-git fetch
-git switch feat/cp-19-m1-acceptance-loop
+- workspace typecheck: passed
+- tests:
+  - `packages/game-core`: 22 tests across 11 files
+  - `apps/web`: 7 tests across 3 files
+  - `workers/api`: 21 tests across 8 files
+  - CP-19 playable loop: 1 real-D1 acceptance test passed
+  - CP-18 claim/equipment race: 3 real-D1 tests passed
+  - D1 atomic repository: 6 tests passed
+- workspace build: passed
+- Worker dry-run upload: 33.28 KiB / gzip 6.18 KiB
+- web dist:
+  - total raw: 17,800 bytes
+  - total gzip: 5,757 bytes
+  - JavaScript gzip: 3,970 bytes
+  - CSS gzip: 1,526 bytes
+  - HTML gzip: 261 bytes
+- CP-13 snapshot/API payload guards remain satisfied
+- CP-13 web bundle budgets remain satisfied
+- `git diff --check`: passed
 
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm --filter @wanderloom/web measure:dist
-git diff --check
-```
+CP-19 is closed.
 
-Expected acceptance:
-
-- all workspace typechecks pass
-- all tests pass, including CP-18 races and CP-19 full loop
-- all builds pass
-- CP-13 snapshot/API payload guards pass
-- web bundle remains within CP-13 budgets
-- `git diff --check` is clean
-
-After this validation succeeds, CP-19 and the current M1 Playable Solo Prototype Definition of Done can be closed.
+The current M1 Playable Solo Prototype Definition of Done is satisfied.
