@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-18-claim-equipment-race-validation`. WSL validation is pending.
+Implementation complete on `feat/cp-18-claim-equipment-race-validation`. WSL typecheck, tests, builds, and bundle measurement passed; final `git diff --check` confirmation is pending.
 
 ## Objective
 
@@ -110,19 +110,25 @@ CP-18 adds the cross-operation race coverage on top of those checks.
 - no equipped-item loss: asserted
 - deterministic conflict contracts: asserted
 
-## Validation target
+## Validation result
 
-Run in WSL:
+WSL validation results recorded so far:
 
-```bash
-git fetch
-git switch feat/cp-18-claim-equipment-race-validation
+- workspace typecheck: passed
+- tests:
+  - `packages/game-core`: 22 tests across 11 files
+  - `apps/web`: 7 tests across 3 files
+  - `workers/api`: 21 tests across 8 files
+  - `claim-equipment-race.integration.test.ts`: 3 tests passed
+- workspace build: passed
+- Worker dry-run upload: 33.28 KiB / gzip 6.18 KiB
+- web dist:
+  - total raw: 17,800 bytes
+  - total gzip: 5,757 bytes
+  - JavaScript gzip: 3,970 bytes
+  - CSS gzip: 1,526 bytes
+  - HTML gzip: 261 bytes
+- CP-13 web budgets remain satisfied
+- `git diff --check`: final confirmation pending
 
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm --filter @wanderloom/web measure:dist
-git diff --check
-```
-
-After successful validation, CP-18 can be closed and CP-19 Full M1 acceptance loop can begin.
+After `git diff --check` passes, CP-18 can be closed and CP-19 Full M1 acceptance loop can begin.
