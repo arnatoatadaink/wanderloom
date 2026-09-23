@@ -21,7 +21,10 @@ export interface RarityDropEntry {
 
 export interface DurationRewardModifier {
   readonly durationId: string;
-  readonly dropWeightMultiplier: number;
+  /** Number of independently seeded drop selections for this duration. */
+  readonly dropCount: number;
+  /** Optional per-rarity weight multiplier; omitted rarities retain multiplier 1. */
+  readonly rarityWeightMultipliers?: Partial<Record<ItemRarity, number>>;
 }
 
 export interface ZoneRewardConfiguration {
@@ -49,19 +52,23 @@ function requireDuration(
 ): DurationRewardModifier {
   const duration = configuration.durations.find((entry) => entry.durationId === durationId);
   if (!duration) throw new RangeError("durationId is not configured for zone");
-  if (!Number.isFinite(duration.dropWeightMultiplier) || duration.dropWeightMultiplier <= 0) {
-    throw new RangeError("dropWeightMultiplier must be a positive finite number");
+  if (!Number.isSafeInteger(duration.dropCount) || duration.dropCount < 0) {
+    throw new RangeError("dropCount must be a non-negative safe integer");
   }
   return duration;
 }
 
-function weightedDrops(configuration: ZoneRewardConfiguration, multiplier: number) {
+function weightedDrops(configuration: ZoneRewardConfiguration, duration: DurationRewardModifier) {
   if (configuration.drops.length === 0) {
     throw new RangeError("zone must configure at least one drop");
   }
   return configuration.drops.map((entry) => {
     if (!Number.isFinite(entry.weight) || entry.weight <= 0) {
       throw new RangeError("drop weight must be a positive finite number");
+    }
+    const multiplier = duration.rarityWeightMultipliers?.[entry.rarity] ?? 1;
+    if (!Number.isFinite(multiplier) || multiplier < 0) {
+      throw new RangeError("rarity weight multiplier must be a finite non-negative number");
     }
     return { entry, weight: entry.weight * multiplier };
   });
@@ -78,7 +85,8 @@ export function generateSeededRarityDrop(input: {
   }
 
   const duration = requireDuration(input.configuration, input.durationId);
-  const weighted = weightedDrops(input.configuration, duration.dropWeightMultiplier);
+  const weighted = weightedDrops(input.configuration, duration).filter((candidate) => candidate.weight > 0);
+  if (weighted.length === 0) throw new RangeError("duration must leave at least one reachable drop");
   const totalWeight = weighted.reduce((sum, candidate) => sum + candidate.weight, 0);
   const roll = (hashText([input.seed, input.zoneId, input.durationId].join("|")) / 0x100000000) * totalWeight;
 
@@ -102,7 +110,20 @@ export function previewConfiguredRarities(
   durationId: string
 ): readonly ItemRarity[] {
   const duration = requireDuration(configuration, durationId);
-  return weightedDrops(configuration, duration.dropWeightMultiplier)
+  return weightedDrops(configuration, duration)
+    .filter(({ weight }) => weight > 0)
     .map(({ entry }) => entry.rarity)
     .filter((rarity, index, all) => all.indexOf(rarity) === index);
+}
+
+export function generateSeededRarityDrops(input: {
+  readonly seed: string;
+  readonly zoneId: ZoneId;
+  readonly durationId: string;
+  readonly configuration: ZoneRewardConfiguration;
+}): readonly RarityGeneratedDrop[] {
+  const duration = requireDuration(input.configuration, input.durationId);
+  return Array.from({ length: duration.dropCount }, (_, index) =>
+    generateSeededRarityDrop({ ...input, seed: `${input.seed}|drop:${index}` })
+  );
 }
