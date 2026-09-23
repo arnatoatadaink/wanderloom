@@ -17,6 +17,7 @@ import { bootstrapGuestPlayer } from "./services/guest-bootstrap";
 import {
   M1_SMOKE_RECENT_ARCHIVE_RETENTION,
   M1_SMOKE_ZONES,
+  M2_SMOKE_ZONES,
   resolveM1SmokeDurationMs
 } from "./m1-smoke-rules";
 import { persistStartedExploration } from "./services/start-exploration-persistence";
@@ -172,7 +173,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
       if (method === "GET" && url.pathname === "/api/zones") {
         return json({
           ok: true,
-          zones: M1_SMOKE_ZONES
+          zones: M2_SMOKE_ZONES
         });
       }
 
