@@ -93,6 +93,37 @@ describe("CP-08 claim calculation", () => {
     });
   });
 
+  it("applies claim EXP through the CP-21 progression rule", () => {
+    const result = calculateClaim({
+      core: {
+        ...core,
+        progression: { level: 2, exp: 8, gold: 40 }
+      },
+      inventory,
+      exploration: core.activeExploration!,
+      resolution: {
+        result: "success",
+        gold: 7,
+        exp: 25,
+        drops: [],
+        summaryMetrics: {}
+      },
+      claimedAt: "2026-09-21T00:05:01.000Z",
+      progressionRule: {
+        maxLevel: 4,
+        expRequiredForLevel: (level) => level * 10
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.nextCore.progression).toEqual({
+      level: 3,
+      exp: 13,
+      gold: 47
+    });
+  });
+
   it("rejects claim before the end time", () => {
     const result = calculateClaim({
       core,

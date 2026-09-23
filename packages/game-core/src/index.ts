@@ -18,3 +18,5 @@ export * from "./domain/reward-drop-contract";
 export * from "./domain/seeded-m1-resolution";
 
 export * from "./domain/expedition-outcome";
+
+export * from "./domain/progression";

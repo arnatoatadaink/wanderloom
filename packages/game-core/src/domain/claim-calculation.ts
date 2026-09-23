@@ -13,6 +13,7 @@ import type {
   MutationResult
 } from "./mutation-result";
 import { deriveExplorationState } from "./exploration-state";
+import { applyProgressionExp, type ProgressionRule } from "./progression";
 
 export interface ExplorationResolution {
   readonly result: string;
@@ -28,6 +29,7 @@ export interface CalculateClaimInput {
   readonly exploration: ActiveExploration;
   readonly resolution: ExplorationResolution;
   readonly claimedAt: IsoDateTime;
+  readonly progressionRule?: ProgressionRule;
 }
 
 export interface CalculateClaimOutput {
@@ -61,13 +63,19 @@ export function calculateClaim(
     };
   }
 
+  const progressed = input.progressionRule
+    ? applyProgressionExp(input.core.progression, input.resolution.exp, input.progressionRule).next
+    : {
+        ...input.core.progression,
+        exp: input.core.progression.exp + input.resolution.exp
+      };
+
   const nextCore: PlayerCoreSnapshot = {
     ...input.core,
     stateVersion: input.core.stateVersion + 1,
     progression: {
-      ...input.core.progression,
-      exp: input.core.progression.exp + input.resolution.exp,
-      gold: input.core.progression.gold + input.resolution.gold
+      ...progressed,
+      gold: progressed.gold + input.resolution.gold
     },
     activeExploration: null,
     updatedAt: input.claimedAt
