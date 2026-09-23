@@ -20,3 +20,5 @@ export * from "./domain/seeded-m1-resolution";
 export * from "./domain/expedition-outcome";
 
 export * from "./domain/progression";
+
+export * from "./domain/rarity-zone-rewards";
