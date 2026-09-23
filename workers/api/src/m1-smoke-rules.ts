@@ -44,4 +44,3 @@ export function resolveM1SmokeDurationMs(
 
   return duration?.durationMs ?? null;
 }
-

@@ -8,15 +8,20 @@ import {
   chooseInitialSelection,
   deriveExplorationPhase,
   initialViewModel,
+  LOCAL_TUTORIAL_DURATION_MS,
   remainingSeconds,
+  remainingTutorialSeconds,
   type AppViewModel
 } from "./view-model";
 
 const PLAYER_STORAGE_KEY = "wanderloom.playerId";
+const TUTORIAL_COMPLETED_STORAGE_KEY = "wanderloom.training.completed";
 
 export class WanderloomApp {
   private state: AppViewModel = initialViewModel();
   private timer: number | null = null;
+  private tutorialTimer: number | null = null;
+  private tutorialEndsAtMs: number | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -28,6 +33,15 @@ export class WanderloomApp {
   async start(): Promise<void> {
     this.render();
 
+    if (this.storage.getItem(TUTORIAL_COMPLETED_STORAGE_KEY) !== "1") {
+      this.startLocalTutorial();
+      return;
+    }
+
+    await this.loadRemoteState();
+  }
+
+  private async loadRemoteState(): Promise<void> {
     try {
       const storedPlayerId = this.storage.getItem(PLAYER_STORAGE_KEY);
       if (storedPlayerId === null) {
@@ -70,6 +84,67 @@ export class WanderloomApp {
       window.clearInterval(this.timer);
       this.timer = null;
     }
+    if (this.tutorialTimer !== null) {
+      window.clearInterval(this.tutorialTimer);
+      this.tutorialTimer = null;
+    }
+  }
+
+  private startLocalTutorial(): void {
+    this.tutorialEndsAtMs = this.now() + LOCAL_TUTORIAL_DURATION_MS;
+    this.state = {
+      ...this.state,
+      phase: "tutorial",
+      tutorialRemainingSeconds: remainingTutorialSeconds(
+        this.tutorialEndsAtMs,
+        this.now()
+      ),
+      errorMessage: null
+    };
+    this.render();
+
+    if (this.tutorialTimer !== null) {
+      return;
+    }
+
+    this.tutorialTimer = window.setInterval(() => {
+      if (this.tutorialEndsAtMs === null) {
+        return;
+      }
+
+      const remaining = remainingTutorialSeconds(
+        this.tutorialEndsAtMs,
+        this.now()
+      );
+      this.state = {
+        ...this.state,
+        tutorialRemainingSeconds: remaining
+      };
+
+      if (remaining === 0) {
+        this.completeLocalTutorial();
+        return;
+      }
+
+      this.render();
+    }, 250);
+  }
+
+  private completeLocalTutorial(): void {
+    if (this.tutorialTimer !== null) {
+      window.clearInterval(this.tutorialTimer);
+      this.tutorialTimer = null;
+    }
+    this.tutorialEndsAtMs = null;
+    this.storage.setItem(TUTORIAL_COMPLETED_STORAGE_KEY, "1");
+    this.state = {
+      ...this.state,
+      phase: "booting",
+      tutorialRemainingSeconds: 0,
+      errorMessage: null
+    };
+    this.render();
+    void this.loadRemoteState();
   }
 
   private ensureTimer(): void {
@@ -230,6 +305,7 @@ export class WanderloomApp {
 
         <section class="panel" aria-live="polite">
           ${phase === "booting" ? this.renderBooting() : ""}
+          ${phase === "tutorial" ? this.renderTutorial() : ""}
           ${phase === "ready" ? this.renderReady() : ""}
           ${phase === "exploring" || phase === "claimable"
             ? this.renderExploration()
@@ -258,6 +334,35 @@ export class WanderloomApp {
         <div class="spinner" aria-hidden="true"></div>
         <p>Preparing your route…</p>
       </div>
+    `;
+  }
+
+  private renderTutorial(): string {
+    return `
+      <div class="section-heading">
+        <p class="eyebrow">TRAINING</p>
+        <h2>First steps</h2>
+      </div>
+
+      <div class="journey-card">
+        <div class="journey-icon">◇</div>
+        <div>
+          <span class="muted">Training Grounds</span>
+          <strong>Practice the expedition loop</strong>
+        </div>
+        <div class="countdown">
+          <span class="muted">Remaining</span>
+          <strong>${formatCountdown(this.state.tutorialRemainingSeconds)}</strong>
+        </div>
+      </div>
+
+      <p class="hint">
+        This is a local training exercise. It uses no server state and grants no rewards.
+      </p>
+
+      <button id="skip-tutorial" class="secondary-action" type="button">
+        Skip training
+      </button>
     `;
   }
 
@@ -515,6 +620,10 @@ export class WanderloomApp {
     this.root
       .querySelector("#retry-app")
       ?.addEventListener("click", () => void this.start());
+
+    this.root
+      .querySelector("#skip-tutorial")
+      ?.addEventListener("click", () => this.completeLocalTutorial());
   }
 
   private selectedZone(): ZoneDto | undefined {

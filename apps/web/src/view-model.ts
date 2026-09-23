@@ -8,6 +8,7 @@ import type {
 
 export type AppPhase =
   | "booting"
+  | "tutorial"
   | "ready"
   | "exploring"
   | "claimable"
@@ -23,6 +24,7 @@ export interface AppViewModel {
   readonly inventory: InventoryDto | null;
   readonly exploration: ActiveExplorationDto | null;
   readonly result: ClaimResultDto | null;
+  readonly tutorialRemainingSeconds: number;
   readonly busy: boolean;
   readonly errorMessage: string | null;
 }
@@ -37,6 +39,7 @@ export function initialViewModel(): AppViewModel {
     inventory: null,
     exploration: null,
     result: null,
+    tutorialRemainingSeconds: 0,
     busy: false,
     errorMessage: null
   };
@@ -75,4 +78,13 @@ export function remainingSeconds(
   nowMs: number
 ): number {
   return Math.max(0, Math.ceil((Date.parse(endsAt) - nowMs) / 1000));
+}
+
+export const LOCAL_TUTORIAL_DURATION_MS = 10_000;
+
+export function remainingTutorialSeconds(
+  endsAtMs: number,
+  nowMs: number
+): number {
+  return Math.max(0, Math.ceil((endsAtMs - nowMs) / 1000));
 }

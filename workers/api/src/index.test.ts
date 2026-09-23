@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import worker, { API_WORKSPACE_READY } from "./index";
+import worker from "./index";
 
 describe("api workspace", () => {
   it("loads inside the Cloudflare Vitest runtime", async () => {
-    expect(API_WORKSPACE_READY).toBe(true);
-
     const response = await worker.fetch(
       new Request("https://example.test/api/health"),
       {

@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   chooseInitialSelection,
   deriveExplorationPhase,
-  remainingSeconds
+  remainingSeconds,
+  remainingTutorialSeconds
 } from "./view-model";
 
 describe("CP-11/17 view model", () => {
@@ -72,5 +73,11 @@ describe("CP-11/17 view model", () => {
         Date.parse("2026-09-21T00:05:01.000Z")
       )
     ).toBe(0);
+  });
+
+  it("keeps the local tutorial countdown independent of server dates", () => {
+    expect(remainingTutorialSeconds(10_000, 8_100)).toBe(2);
+    expect(remainingTutorialSeconds(10_000, 10_000)).toBe(0);
+    expect(remainingTutorialSeconds(10_000, 11_000)).toBe(0);
   });
 });

@@ -1,8 +1,29 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { WanderloomApiClient } from "./api-client";
 
 describe("CP-11/17 API client", () => {
+  it("invokes the default browser fetch with its global receiver", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(Response.json({ ok: true, zones: [] }));
+
+    try {
+      const client = new WanderloomApiClient(undefined, "player-1");
+
+      await client.getZones();
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "/api/zones",
+        expect.objectContaining({
+          headers: expect.any(Headers)
+        })
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it("persists the bootstrapped player identity in the client", async () => {
     const client = new WanderloomApiClient(async () =>
       Response.json(

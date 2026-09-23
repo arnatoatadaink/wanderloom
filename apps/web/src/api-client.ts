@@ -92,11 +92,14 @@ type FetchLike = (
   init?: RequestInit
 ) => Promise<Response>;
 
+const defaultFetch: FetchLike = (input, init) =>
+  globalThis.fetch(input, init);
+
 export class WanderloomApiClient {
   private playerId: string | null;
 
   constructor(
-    private readonly fetchImpl: FetchLike = fetch,
+    private readonly fetchImpl: FetchLike = defaultFetch,
     playerId: string | null = null
   ) {
     this.playerId = playerId;
