@@ -3,6 +3,10 @@ import {
   equipItem,
   instantiateDrop,
   resolveSeededM1Exploration,
+  resolveSeededExpedition,
+  generateSeededRarityDrops,
+  type ProgressionRule,
+  type ZoneRewardConfiguration,
   type ActiveExploration,
   type ExplorationId,
   type ExplorationResolution,
@@ -45,6 +49,8 @@ export interface ApiRuntime {
     createItemInstanceId: () => ItemInstanceId
   ) => ExplorationResolution | null;
   readonly recentArchiveRetention: number | null;
+  readonly progressionRule?: ProgressionRule;
+  readonly rewardConfiguration?: ZoneRewardConfiguration;
 }
 
 const defaultRuntime: ApiRuntime = {
@@ -197,7 +203,10 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           return notReady("server_zone_duration_resolution");
         }
 
-        const result = await persistStartedExploration(coreRepository, {
+        const inventory = runtime.rewardConfiguration
+      ? await inventoryRepository.findByPlayerId(playerId)
+      : null;
+    const result = await persistStartedExploration(coreRepository, {
           player: core,
           zoneId,
           durationId: body.durationId,
@@ -205,7 +214,8 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           explorationId: runtime.createExplorationId(),
           claimNonce: runtime.createClaimNonce(),
           seed: runtime.createSeed(),
-          startedAt: runtime.now()
+          startedAt: runtime.now(),
+          ...(inventory ? { inventory, equipmentEffectDefinitions: [] } : {})
         });
 
         return result.ok
@@ -289,7 +299,8 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           inventory,
           exploration,
           resolution,
-          claimedAt
+          claimedAt,
+          progressionRule: runtime.progressionRule
         });
         if (!calculated.ok) {
           return json(
