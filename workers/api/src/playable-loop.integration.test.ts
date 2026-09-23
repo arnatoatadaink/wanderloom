@@ -88,7 +88,7 @@ function request(
   });
 }
 
-describe("CP-12 playable loop with real D1", () => {
+describe("CP-19 full M1 acceptance loop with real D1", () => {
   beforeAll(async () => {
     await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
   });
@@ -132,6 +132,24 @@ describe("CP-12 playable loop with real D1", () => {
     expect(
       new TextEncoder().encode(await zonesResponse.clone().text()).byteLength
     ).toBeLessThanOrEqual(CP13_PAYLOAD_BUDGET_BYTES.zoneCatalog);
+    await expect(zonesResponse.clone().json()).resolves.toMatchObject({
+      ok: true,
+      zones: [
+        {
+          zoneId: "m1-smoke-frontier",
+          durations: [
+            {
+              durationId: "short",
+              preview: {
+                gold: { min: 5, max: 6 },
+                exp: { min: 10, max: 10 },
+                drops: { minItems: 1, maxItems: 1 }
+              }
+            }
+          ]
+        }
+      ]
+    });
 
     const startResponse = await api.fetch(
       request("/api/explorations", {
@@ -481,13 +499,43 @@ describe("CP-12 playable loop with real D1", () => {
     );
 
     expect(restartResponse.status).toBe(201);
-    await expect(restartResponse.json()).resolves.toMatchObject({
+    const restarted = (await restartResponse.json()) as {
+      readonly core: {
+        readonly stateVersion: number;
+        readonly activeExploration: {
+          readonly explorationId: string;
+        } | null;
+      };
+    };
+    expect(restarted).toMatchObject({
       ok: true,
       core: {
         stateVersion: 3,
         activeExploration: {
           explorationId: secondExplorationId
         }
+      }
+    });
+
+    const finalInventoryResponse = await api.fetch(
+      request("/api/inventory"),
+      { DB: db }
+    );
+    await expect(finalInventoryResponse.json()).resolves.toMatchObject({
+      ok: true,
+      inventory: {
+        stateVersion: 2,
+        equipment: {
+          slots: {
+            charm: "item-instance-cp15"
+          }
+        },
+        items: [
+          {
+            itemInstanceId: "item-instance-cp15",
+            itemDefinitionId: "m1-wayfarer-charm"
+          }
+        ]
       }
     });
   });
