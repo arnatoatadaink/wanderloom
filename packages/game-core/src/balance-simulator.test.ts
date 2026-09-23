@@ -40,10 +40,26 @@ describe("CP-24 balance simulator", () => {
     expect(report.successRate).toBe(report.successes / 100);
     expect(report.retainedGoldPerRun).toBe(report.retainedGoldTotal / 100);
     expect(report.retainedExpPerRun).toBe(report.retainedExpTotal / 100);
+    expect(report.generatedGoldTotal).toBeGreaterThanOrEqual(report.retainedGoldTotal);
+    expect(report.generatedExpTotal).toBeGreaterThanOrEqual(report.retainedExpTotal);
     expect(report.generatedDropCount).toBe(200);
+    expect(report.retainedDropCount + report.lostDropCount).toBe(200);
+    expect(report.lostDropCount).toBe(report.failures * 2);
     expect((report.rarityCounts.Common ?? 0) + (report.rarityCounts.Rare ?? 0)).toBe(200);
     expect(report.finalProgression.gold).toBe(report.retainedGoldTotal);
     expect(report.levelsGained).toBeGreaterThanOrEqual(0);
+  });
+
+  it("can retain generated drops on failure without changing deterministic outcomes", () => {
+    const report = simulateBalance({
+      ...input,
+      expeditionConfig: {
+        ...input.expeditionConfig,
+        lossPolicy: { ...input.expeditionConfig.lossPolicy, retainGeneratedDrops: true }
+      }
+    });
+    expect(report.retainedDropCount).toBe(200);
+    expect(report.lostDropCount).toBe(0);
   });
 
   it("rejects invalid iteration counts", () => {
