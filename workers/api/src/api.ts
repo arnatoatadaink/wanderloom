@@ -300,7 +300,9 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           exploration,
           resolution,
           claimedAt,
-          progressionRule: runtime.progressionRule
+          ...(runtime.progressionRule
+            ? { progressionRule: runtime.progressionRule }
+            : {})
         });
         if (!calculated.ok) {
           return json(
