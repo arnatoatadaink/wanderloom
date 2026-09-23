@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation complete on `feat/cp-18-claim-equipment-race-validation`. WSL typecheck, tests, builds, and bundle measurement passed; final `git diff --check` confirmation is pending.
+Implementation and WSL validation complete on `feat/cp-18-claim-equipment-race-validation`.
 
 ## Objective
 
@@ -129,6 +129,6 @@ WSL validation results recorded so far:
   - CSS gzip: 1,526 bytes
   - HTML gzip: 261 bytes
 - CP-13 web budgets remain satisfied
-- `git diff --check`: final confirmation pending
+- `git diff --check`: passed
 
-After `git diff --check` passes, CP-18 can be closed and CP-19 Full M1 acceptance loop can begin.
+CP-18 is closed. CP-19 Full M1 acceptance loop can begin.
