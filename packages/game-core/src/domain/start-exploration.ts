@@ -1,5 +1,7 @@
 import type { ActiveExploration, IsoDateTime, PlayerCoreSnapshot } from "./core-snapshot";
 import type { ExplorationId, ZoneId } from "./ids";
+import type { PlayerInventorySnapshot } from "./inventory-snapshot";
+import { freezeExplorationCharacter, type EquipmentEffectDefinition } from "./equipment-effects";
 import type { InvalidExplorationState, MutationResult } from "./mutation-result";
 import { deriveExplorationState } from "./exploration-state";
 
@@ -12,6 +14,8 @@ export interface StartExplorationInput {
   readonly claimNonce: string;
   readonly seed: string;
   readonly startedAt: IsoDateTime;
+  readonly inventory?: PlayerInventorySnapshot;
+  readonly equipmentEffectDefinitions?: readonly EquipmentEffectDefinition[];
 }
 
 export interface StartExplorationOutput {
@@ -46,6 +50,13 @@ export function startExploration(
   }
 
   const startedAtMs = Date.parse(input.startedAt);
+  const characterSnapshot = input.inventory
+    ? freezeExplorationCharacter({
+        character: input.player.character,
+        inventory: input.inventory,
+        effectDefinitions: input.equipmentEffectDefinitions ?? []
+      })
+    : input.player.character;
   const exploration: ActiveExploration = {
     explorationId: input.explorationId,
     zoneId: input.zoneId,
@@ -54,7 +65,7 @@ export function startExploration(
     endsAt: new Date(startedAtMs + input.durationMs).toISOString(),
     seed: input.seed,
     claimNonce: input.claimNonce,
-    characterSnapshot: input.player.character
+    characterSnapshot
   };
 
   const nextCore: PlayerCoreSnapshot = {
