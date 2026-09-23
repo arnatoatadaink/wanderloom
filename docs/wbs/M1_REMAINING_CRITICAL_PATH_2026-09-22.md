@@ -173,7 +173,7 @@ M1 DoD explicitly requires concurrent equipment/claim operations not to overwrit
 
 ---
 
-### CP-19 — Full M1 acceptance loop
+### CP-19 — Full M1 acceptance loop — implementation complete; final validation pending
 
 Primary WBS mapping:
 
@@ -223,4 +223,4 @@ These should remain in the WBS but must not delay CP-14 through CP-19.
 
 ## Immediate next action
 
-Start CP-19 Full M1 acceptance loop.
+Validate CP-19 in WSL. If successful, close CP-19 and the current M1 Playable Solo Prototype Definition of Done.
