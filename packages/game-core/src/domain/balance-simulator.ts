@@ -20,11 +20,15 @@ export interface BalanceSimulationReport {
   readonly successes: number;
   readonly failures: number;
   readonly successRate: number;
+  readonly generatedGoldTotal: number;
+  readonly generatedExpTotal: number;
   readonly retainedGoldTotal: number;
   readonly retainedExpTotal: number;
   readonly retainedGoldPerRun: number;
   readonly retainedExpPerRun: number;
   readonly generatedDropCount: number;
+  readonly retainedDropCount: number;
+  readonly lostDropCount: number;
   readonly rarityCounts: Readonly<Partial<Record<ItemRarity, number>>>;
   readonly finalProgression: ProgressionState;
   readonly levelsGained: number;
@@ -40,9 +44,13 @@ export function simulateBalance(input: BalanceSimulationInput): BalanceSimulatio
 
   let successes = 0;
   let failures = 0;
+  let generatedGoldTotal = 0;
+  let generatedExpTotal = 0;
   let retainedGoldTotal = 0;
   let retainedExpTotal = 0;
   let generatedDropCount = 0;
+  let retainedDropCount = 0;
+  let lostDropCount = 0;
   const rarityCounts: Partial<Record<ItemRarity, number>> = {};
   let progression = input.initialProgression;
 
@@ -58,6 +66,8 @@ export function simulateBalance(input: BalanceSimulationInput): BalanceSimulatio
     if (resolution.result === "success") successes += 1;
     else failures += 1;
 
+    generatedGoldTotal += resolution.generatedGold;
+    generatedExpTotal += resolution.generatedExp;
     retainedGoldTotal += resolution.rewards.retainedGold;
     retainedExpTotal += resolution.rewards.retainedExp;
 
@@ -68,6 +78,11 @@ export function simulateBalance(input: BalanceSimulationInput): BalanceSimulatio
       configuration: input.rewardConfiguration
     });
     generatedDropCount += drops.length;
+    if (resolution.result === "success" || input.expeditionConfig.lossPolicy.retainGeneratedDrops) {
+      retainedDropCount += drops.length;
+    } else {
+      lostDropCount += drops.length;
+    }
     for (const drop of drops) {
       rarityCounts[drop.rarity] = (rarityCounts[drop.rarity] ?? 0) + 1;
     }
@@ -84,11 +99,15 @@ export function simulateBalance(input: BalanceSimulationInput): BalanceSimulatio
     successes,
     failures,
     successRate: successes / input.iterations,
+    generatedGoldTotal,
+    generatedExpTotal,
     retainedGoldTotal,
     retainedExpTotal,
     retainedGoldPerRun: retainedGoldTotal / input.iterations,
     retainedExpPerRun: retainedExpTotal / input.iterations,
     generatedDropCount,
+    retainedDropCount,
+    lostDropCount,
     rarityCounts,
     finalProgression: progression,
     levelsGained: progression.level - input.initialProgression.level
