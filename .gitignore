@@ -4,3 +4,7 @@ node_modules
 .pnpm-store/
 dist/
 trash/
+
+# Local Google OIDC configuration; never commit environment-specific values.
+apps/web/.env.local
+workers/api/.dev.vars
