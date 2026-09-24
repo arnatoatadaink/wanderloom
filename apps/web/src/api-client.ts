@@ -89,11 +89,12 @@ export interface ClaimResultDto {
   };
 }
 
-interface ApiErrorBody {
+export interface ApiErrorBody {
   readonly ok: false;
   readonly error: {
     readonly code: string;
-    readonly [key: string]: unknown;
+    readonly retryable: boolean;
+    readonly details?: Readonly<Record<string, unknown>>;
   };
 }
 
@@ -101,6 +102,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
+    readonly retryable: boolean,
+    readonly details: Readonly<Record<string, unknown>> | undefined,
     readonly body: unknown
   ) {
     super(`API request failed: ${status} ${code}`);
@@ -262,6 +265,8 @@ export class WanderloomApiClient {
       throw new ApiError(
         response.status,
         errorBody.error?.code ?? "unknown_error",
+        errorBody.error?.retryable ?? false,
+        errorBody.error?.details,
         body
       );
     }
