@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress**
+**Accepted / Complete**
 
 ## Objective
 
@@ -87,26 +87,28 @@ CP-28 does not yet:
 
 Any tuning must follow measured evidence.
 
-## Validation required
+## Acceptance evidence
 
-Before CP-28 acceptance, run:
+User-reported local WSL validation on 2026-09-24:
 
-- `pnpm -r typecheck`
-- `pnpm -r test`
-- `pnpm -r build`
-- `git diff --check`
+- `pnpm -r typecheck`: PASS across Web / game-core / Worker.
+- `pnpm -r test`: PASS.
+  - Web: 3 files / 10 tests.
+  - game-core: 17 files / 50 tests.
+  - Worker: 11 files / 27 tests.
+  - Total: **87 tests PASS**.
+- `pnpm -r build`: PASS on the preceding CP-28 validation run.
+  - Web production build: PASS.
+  - game-core TypeScript build: PASS.
+  - Worker Wrangler dry-run: PASS.
+- `git diff --check`: clean.
+- `workers/api/.wrangler/` remains an untracked local runtime directory and is not repository content.
 
-Expected test-count increase from v0.0.2 baseline:
-
-- game-core: +3 tests
-- Worker: +3 tests
-- Web: unchanged
-
-If all tests are discovered, the expected total is **87 tests**.
+During validation, two strict floating-point equality assertions were corrected to approximate comparisons. The measurement logic itself was unchanged.
 
 ## Exit criteria
 
-CP-28 can close when:
+All CP-28 exit criteria are satisfied:
 
 - named scenario measurement API typechecks
 - scenario measurement tests pass
@@ -115,4 +117,6 @@ CP-28 can close when:
 - v0.0.2 regressions remain green
 - complete workspace validation passes
 
-Next CP after acceptance: **CP-29 Production Contract Hardening**.
+CP-28 is **Accepted / Complete**.
+
+Next CP: **CP-29 Production Contract Hardening**.
