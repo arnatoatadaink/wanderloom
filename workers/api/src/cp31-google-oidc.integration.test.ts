@@ -121,7 +121,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
          WHERE provider = ?1
            AND subject = ?2`
       )
-      .bind("google", "google-sub:link-one")
+      .bind("google", "google-sub:link-persist")
       .first<{
         provider: string;
         subject: string;
@@ -197,7 +197,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
         retryable: false,
         details: {
           provider: "google",
-          subject: "google-sub:link-idempotent",
+          subject: "google-sub:link-conflict",
           existingPlayerId: firstPlayer
         }
       }
@@ -233,7 +233,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
         retryable: false,
         details: {
           provider: "google",
-          existingSubject: "google-sub:link-one"
+          existingSubject: "google-sub:link-provider-one"
         }
       }
     });
