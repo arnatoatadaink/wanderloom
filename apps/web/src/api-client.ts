@@ -154,6 +154,55 @@ export class WanderloomApiClient {
     return body;
   }
 
+  async linkGoogleAccount(
+    credential: string
+  ): Promise<{
+    readonly status: "linked" | "already_linked";
+    readonly provider: "google";
+    readonly subject: string;
+  }> {
+    const body = await this.request<{
+      readonly ok: true;
+      readonly accountLink: {
+        readonly status: "linked" | "already_linked";
+        readonly provider: "google";
+        readonly subject: string;
+      };
+    }>("/api/auth/google/link", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ credential })
+    });
+
+    return body.accountLink;
+  }
+
+  async restoreGoogleAccount(
+    credential: string
+  ): Promise<{
+    readonly playerId: string;
+    readonly core: CoreDto;
+    readonly inventory: InventoryDto;
+  }> {
+    const body = await this.request<{
+      readonly ok: true;
+      readonly playerId: string;
+      readonly core: CoreDto;
+      readonly inventory: InventoryDto;
+    }>("/api/auth/google/restore", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ credential })
+    }, false);
+
+    this.playerId = body.playerId;
+    return body;
+  }
+
   async getZones(): Promise<readonly ZoneDto[]> {
     const body = await this.request<{
       readonly ok: true;
