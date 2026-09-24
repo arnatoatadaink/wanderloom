@@ -216,7 +216,10 @@ describe("CP-26 M2 migration and concurrency regression", () => {
       ok: false,
       error: {
         code: "already_claimed",
-        explorationId
+        retryable: true,
+        details: {
+          explorationId
+        }
       }
     });
 

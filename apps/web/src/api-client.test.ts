@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { WanderloomApiClient } from "./api-client";
+import { ApiError, WanderloomApiClient } from "./api-client";
 
 describe("CP-11/17 API client", () => {
   it("invokes the default browser fetch with its global receiver", async () => {
@@ -166,5 +166,35 @@ describe("CP-11/17 API client", () => {
     await client.getZones();
 
     expect(observedHeader).toBe("player-1");
+  });
+  it("preserves API retryability and details on errors", async () => {
+    const client = new WanderloomApiClient(async () =>
+      Response.json(
+        {
+          ok: false,
+          error: {
+            code: "version_conflict",
+            retryable: true,
+            details: {
+              snapshot: "inventory",
+              expectedVersion: 1,
+              actualVersion: 2
+            }
+          }
+        },
+        { status: 409 }
+      )
+    , "player-1");
+
+    await expect(client.getInventory()).rejects.toMatchObject({
+      status: 409,
+      code: "version_conflict",
+      retryable: true,
+      details: {
+        snapshot: "inventory",
+        expectedVersion: 1,
+        actualVersion: 2
+      }
+    } satisfies Partial<ApiError>);
   });
 });
