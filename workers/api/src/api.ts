@@ -4,6 +4,7 @@ import {
   instantiateDrop,
   resolveSeededExpedition,
   generateSeededRarityDrops,
+  type EquipmentEffectDefinition,
   type ProgressionRule,
   type ZoneRewardConfiguration,
   type ActiveExploration,
@@ -22,9 +23,11 @@ import {
   M1_SMOKE_ZONES,
   M2_SMOKE_ZONES,
   M2_PREVIEW_LOSS_POLICY,
+  M2_SMOKE_EQUIPMENT_EFFECT_DEFINITIONS,
   M2_SMOKE_PROGRESSION_RULE,
   M2_SMOKE_REWARD_CONFIGURATION,
-  resolveM1SmokeDurationMs
+  resolveM2SmokeDurationMs,
+  resolveM2SmokeRewardConfiguration
 } from "./m1-smoke-rules";
 import { persistStartedExploration } from "./services/start-exploration-persistence";
 
@@ -53,6 +56,7 @@ export interface ApiRuntime {
   readonly recentArchiveRetention: number | null;
   readonly progressionRule?: ProgressionRule;
   readonly rewardConfiguration?: ZoneRewardConfiguration;
+  readonly equipmentEffectDefinitions?: readonly EquipmentEffectDefinition[];
 }
 
 const defaultRuntime: ApiRuntime = {
@@ -62,7 +66,7 @@ const defaultRuntime: ApiRuntime = {
   createClaimNonce: () => crypto.randomUUID(),
   createSeed: () => crypto.randomUUID(),
   createItemInstanceId: () => crypto.randomUUID() as ItemInstanceId,
-  resolveDurationMs: resolveM1SmokeDurationMs,
+  resolveDurationMs: resolveM2SmokeDurationMs,
   resolveExploration: (exploration, claimedAt, createItemInstanceId) => {
     const resolved = resolveSeededExpedition({
       seed: exploration.seed,
@@ -74,11 +78,16 @@ const defaultRuntime: ApiRuntime = {
         lossPolicy: M2_PREVIEW_LOSS_POLICY
       }
     });
+    const rewardConfiguration =
+      resolveM2SmokeRewardConfiguration(exploration.zoneId);
+    if (rewardConfiguration === null) {
+      return null;
+    }
     const generatedDrops = generateSeededRarityDrops({
       seed: exploration.seed,
       zoneId: exploration.zoneId,
       durationId: exploration.durationId,
-      configuration: M2_SMOKE_REWARD_CONFIGURATION
+      configuration: rewardConfiguration
     });
     const retainedDrops =
       resolved.result === "success" ||
@@ -106,7 +115,8 @@ const defaultRuntime: ApiRuntime = {
   },
   recentArchiveRetention: M1_SMOKE_RECENT_ARCHIVE_RETENTION,
   progressionRule: M2_SMOKE_PROGRESSION_RULE,
-  rewardConfiguration: M2_SMOKE_REWARD_CONFIGURATION
+  rewardConfiguration: M2_SMOKE_REWARD_CONFIGURATION,
+  equipmentEffectDefinitions: M2_SMOKE_EQUIPMENT_EFFECT_DEFINITIONS
 };
 
 function json(body: unknown, status = 200): Response {
@@ -226,10 +236,13 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           return notReady("server_zone_duration_resolution");
         }
 
-        const inventory = runtime.rewardConfiguration
-      ? await inventoryRepository.findByPlayerId(playerId)
-      : null;
-    const result = await persistStartedExploration(coreRepository, {
+        const shouldFreezeCharacter =
+          runtime.rewardConfiguration !== undefined ||
+          runtime.equipmentEffectDefinitions !== undefined;
+        const inventory = shouldFreezeCharacter
+          ? await inventoryRepository.findByPlayerId(playerId)
+          : null;
+        const result = await persistStartedExploration(coreRepository, {
           player: core,
           zoneId,
           durationId: body.durationId,
@@ -238,7 +251,13 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           claimNonce: runtime.createClaimNonce(),
           seed: runtime.createSeed(),
           startedAt: runtime.now(),
-          ...(inventory ? { inventory, equipmentEffectDefinitions: [] } : {})
+          ...(inventory
+            ? {
+                inventory,
+                equipmentEffectDefinitions:
+                  runtime.equipmentEffectDefinitions ?? []
+              }
+            : {})
         });
 
         return result.ok
