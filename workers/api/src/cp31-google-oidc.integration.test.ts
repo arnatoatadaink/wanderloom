@@ -33,10 +33,7 @@ class FakeGoogleVerifier implements GoogleIdTokenVerifier {
       throw new GoogleOidcVerificationError("invalid_google_credential");
     }
     return {
-      subject:
-        credential === "credential-two"
-          ? "google-sub-2"
-          : "google-sub-1"
+      subject: `google-sub:${credential}`
     };
   }
 }
@@ -100,7 +97,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     const playerId = await bootstrap(api);
 
     const response = await api.fetch(
-      request(playerId, "credential-one"),
+      request(playerId, "link-one"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -113,7 +110,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
       accountLink: {
         status: "linked",
         provider: "google",
-        subject: "google-sub-1"
+        subject: "google-sub:link-one"
       }
     });
 
@@ -124,7 +121,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
          WHERE provider = ?1
            AND subject = ?2`
       )
-      .bind("google", "google-sub-1")
+      .bind("google", "google-sub:link-one")
       .first<{
         provider: string;
         subject: string;
@@ -133,7 +130,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
 
     expect(row).toEqual({
       provider: "google",
-      subject: "google-sub-1",
+      subject: "google-sub:link-one",
       player_id: playerId
     });
   });
@@ -143,7 +140,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     const playerId = await bootstrap(api);
 
     const first = await api.fetch(
-      request(playerId, "credential-one"),
+      request(playerId, "link-one"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -152,7 +149,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     expect(first.status).toBe(200);
 
     const retry = await api.fetch(
-      request(playerId, "credential-one"),
+      request(playerId, "link-one"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -165,7 +162,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
       accountLink: {
         status: "already_linked",
         provider: "google",
-        subject: "google-sub-1"
+        subject: "google-sub:link-one"
       }
     });
   });
@@ -176,7 +173,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     const secondPlayer = await bootstrap(api);
 
     const first = await api.fetch(
-      request(firstPlayer, "credential-one"),
+      request(firstPlayer, "link-one"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -185,7 +182,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     expect(first.status).toBe(200);
 
     const conflict = await api.fetch(
-      request(secondPlayer, "credential-one"),
+      request(secondPlayer, "link-one"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -200,7 +197,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
         retryable: false,
         details: {
           provider: "google",
-          subject: "google-sub-1",
+          subject: "google-sub:link-one",
           existingPlayerId: firstPlayer
         }
       }
@@ -212,7 +209,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     const playerId = await bootstrap(api);
 
     const first = await api.fetch(
-      request(playerId, "credential-one"),
+      request(playerId, "link-one"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -221,7 +218,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     expect(first.status).toBe(200);
 
     const conflict = await api.fetch(
-      request(playerId, "credential-two"),
+      request(playerId, "link-two"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -236,7 +233,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
         retryable: false,
         details: {
           provider: "google",
-          existingSubject: "google-sub-1"
+          existingSubject: "google-sub:link-one"
         }
       }
     });
