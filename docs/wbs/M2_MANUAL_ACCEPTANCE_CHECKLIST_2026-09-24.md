@@ -2,7 +2,11 @@
 
 ## Status
 
-Local manual acceptance checklist for the completed **M2 Solo Progression Slice**.
+**Accepted / PASS**
+
+Manual acceptance completed on 2026-09-24 against `m2` commit
+`417365c6476622936f56c4e9d42df5293e62d1b8` using the local Worker, Web app,
+and reused local D1 state.
 
 This checklist validates visible behavior and user-operable flow after M2 closure. It does **not** approve production balance values.
 
@@ -12,13 +16,13 @@ This checklist validates visible behavior and user-operable flow after M2 closur
 
 ### Environment
 
-- [ ] Local source is synchronized with `m2`.
-- [ ] No unintended source diff exists before acceptance.
-- [ ] Worker API starts successfully.
-- [ ] Web app starts successfully.
-- [ ] Browser can reach the local Web app.
-- [ ] Browser can reach the local Worker API through the configured development route.
-- [ ] Local D1 database is initialized with current migrations.
+- [x] Local source is synchronized with `m2`.
+- [x] No unintended source diff exists before acceptance.
+- [x] Worker API starts successfully.
+- [x] Web app starts successfully.
+- [x] Browser can reach the local Web app.
+- [x] Browser can reach the local Worker API through the configured development route.
+- [x] Local D1 database is initialized with current migrations.
 
 ### Recommended evidence
 
@@ -457,38 +461,43 @@ Notes:
 
 The manual acceptance is considered complete when all of the following have been visually confirmed:
 
-- [ ] Multiple zone/duration choices are usable.
-- [ ] Risk/reward/rarity preview is visible.
-- [ ] Exploration can start and complete.
-- [ ] Claim updates persistent progression/reward state.
-- [ ] A retained item can preserve visible rarity.
-- [ ] A retained item can be equipped.
-- [ ] A later exploration reflects equipped stat modifiers in its frozen effective stats.
-- [ ] Refresh does not visibly corrupt persisted state.
-- [ ] No blocking UI/runtime error prevents another expedition.
+- [x] Multiple zone/duration choices are usable.
+- [x] Risk/reward/rarity preview is visible.
+- [x] Exploration can start and complete.
+- [x] Claim updates persistent progression/reward state.
+- [x] A retained item can preserve visible rarity.
+- [x] A retained item can be equipped.
+- [x] A later exploration reflects equipped stat modifiers in its frozen effective stats.
+- [x] Refresh does not visibly corrupt persisted state.
+- [x] No blocking UI/runtime error prevents another expedition.
 
 Failure-path visual confirmation is desirable but is **not mandatory** if a failure seed is not encountered manually, because CP-26 automated real-D1 acceptance already covers the failure/progression/retry path.
 
 ### Final record
 
 ```text
-Overall: PASS / FAIL
+Overall: PASS
 
-Commit:
-Date:
-Tester:
+Commit: 417365c6476622936f56c4e9d42df5293e62d1b8
+Date: 2026-09-24
+Tester: User manual browser verification + Codex local runtime/API verification
 
 Blocking defects:
--
+- None.
 
 Non-blocking observations:
--
+- Uncommon rarity was observed.
+- Zone 1 and Zone 2 both allowed 5-minute and 10-minute selections.
+- Start, Claim, and Equip remained operable at a narrow viewport width.
+- Failure behavior and the equipped-item Effective stats change were visually confirmed.
 
 Balance observations (do not treat as M2 defects):
--
+- All four zone/duration selections currently show 25% failure probability,
+  50% Gold retention, 50% EXP retention, and generated-drop loss on failure.
+- Reachable item rarity is the observed differentiator between the provisional choices.
 
 Follow-up candidates:
--
+- Revisit per-zone/per-duration risk and reward differentiation during production balance tuning.
 ```
 
 ---
