@@ -69,8 +69,10 @@ const defaultRuntime: ApiRuntime = {
       explorationId: exploration.explorationId,
       zoneId: exploration.zoneId,
       durationId: exploration.durationId,
-      failureProbability: 0.25,
-      lossPolicy: M2_PREVIEW_LOSS_POLICY
+      config: {
+        failureProbability: 0.25,
+        lossPolicy: M2_PREVIEW_LOSS_POLICY
+      }
     });
     const generatedDrops = generateSeededRarityDrops({
       seed: exploration.seed,
