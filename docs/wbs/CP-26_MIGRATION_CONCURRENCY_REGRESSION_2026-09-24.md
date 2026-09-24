@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress.
+**Accepted / Complete**
 
 ## Objective
 
@@ -46,19 +46,34 @@ Verify in real D1 that one failure claim:
 - rejects a duplicate retry as `already_claimed`
 - leaves persisted progression unchanged after the rejected retry
 
-## Remaining CP-26 validation
+## Acceptance evidence
 
-After the new tests compile and pass:
+User-reported WSL validation on 2026-09-24:
 
-1. run the complete workspace typecheck/test/build suite
-2. retain the existing CP-18 concurrency suite as regression evidence
-3. retain the CP-19 real-D1 M1 loop as backward-compatibility evidence
-4. run `git diff --check`
-5. record final test counts and accept CP-26 if all remain green
+- `pnpm -r typecheck`: PASS across game-core / web / Worker.
+- `pnpm -r test`: PASS.
+  - game-core: 16 files / 47 tests.
+  - web: 3 files / 10 tests.
+  - Worker: 9 files / 23 tests.
+  - total: **80 tests**.
+- CP-26 real-D1 regression: 2 tests PASS.
+- CP-18 claim/equipment race regression: 3 tests PASS.
+- CP-19 playable-loop real-D1 regression: PASS.
+- `pnpm -r build`: PASS.
+  - Web: production Vite build PASS.
+  - game-core: TypeScript build PASS.
+  - Worker: Wrangler dry-run build PASS.
+- Web bundle:
+  - JS: 15.95 kB raw / 4.55 kB gzip.
+  - CSS: 4.09 kB raw / 1.53 kB gzip.
+  - HTML: 0.39 kB raw / 0.26 kB gzip.
+- Worker dry-run upload: 44.37 KiB raw / 8.67 KiB gzip.
+- `git diff --check`: clean.
+- `workers/api/.wrangler/` remains an untracked local runtime directory and is not accepted as repository content.
 
 ## Exit criteria
 
-CP-26 can close when:
+All CP-26 exit criteria are satisfied:
 
 - M2 extended snapshot round-trip passes with real D1
 - M2 failure/progression claim passes with real D1
@@ -67,4 +82,4 @@ CP-26 can close when:
 - M1 real-D1 acceptance remains green
 - workspace typecheck/test/build and diff check pass
 
-Next critical-path item after acceptance: **CP-27 Full M2 Acceptance**.
+Next critical-path item: **CP-27 Full M2 Acceptance**.
