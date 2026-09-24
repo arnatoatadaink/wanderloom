@@ -1,4 +1,4 @@
-import { createExpeditionRiskPreview, previewConfiguredRarities, type LossPolicy, type RewardPreview, type ZoneId, type ZoneRewardConfiguration } from "@wanderloom/game-core";
+import { createExpeditionRiskPreview, previewConfiguredRarities, type ItemDefinitionId, type LossPolicy, type ProgressionRule, type RewardPreview, type ZoneId, type ZoneRewardConfiguration } from "@wanderloom/game-core";
 
 export interface M1ZoneDefinition {
   readonly zoneId: ZoneId;
@@ -36,11 +36,11 @@ export const M2_PREVIEW_LOSS_POLICY: LossPolicy = {
   retainGeneratedDrops: false
 };
 
-const M2_PREVIEW_REWARDS: ZoneRewardConfiguration = {
+export const M2_SMOKE_REWARD_CONFIGURATION: ZoneRewardConfiguration = {
   zoneId: "m1-smoke-frontier" as ZoneId,
   drops: [
-    { itemDefinitionId: "m1-wayfarer-charm" as never, rarity: "Common", weight: 8 },
-    { itemDefinitionId: "m2-wayfarer-charm-rare" as never, rarity: "Rare", weight: 2 }
+    { itemDefinitionId: "m1-wayfarer-charm" as ItemDefinitionId, rarity: "Common", weight: 8 },
+    { itemDefinitionId: "m2-wayfarer-charm-rare" as ItemDefinitionId, rarity: "Rare", weight: 2 }
   ],
   durations: [{ durationId: "short", dropCount: 1 }]
 };
@@ -52,9 +52,14 @@ export const M2_SMOKE_ZONES: readonly M1ZoneDefinition[] = [{
   durations: [{
     ...firstDuration,
     risk: createExpeditionRiskPreview(0.25, M2_PREVIEW_LOSS_POLICY),
-    rarities: previewConfiguredRarities(M2_PREVIEW_REWARDS, firstDuration.durationId)
+    rarities: previewConfiguredRarities(M2_SMOKE_REWARD_CONFIGURATION, firstDuration.durationId)
   }]
 }];
+
+export const M2_SMOKE_PROGRESSION_RULE: ProgressionRule = {
+  maxLevel: 20,
+  expRequiredForLevel: (level) => 100 + (level - 1) * 25
+};
 
 export const M1_SMOKE_RECENT_ARCHIVE_RETENTION = 3;
 
