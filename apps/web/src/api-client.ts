@@ -39,6 +39,16 @@ export interface ActiveExplorationDto {
   readonly durationId: string;
   readonly startedAt: string;
   readonly endsAt: string;
+  readonly characterSnapshot?: {
+    readonly stats: Readonly<Record<string, number>>;
+    readonly baseStats?: Readonly<Record<string, number>>;
+    readonly equipmentEffects?: readonly {
+      readonly slot: string;
+      readonly itemInstanceId: string;
+      readonly itemDefinitionId: string;
+      readonly statModifiers: Readonly<Record<string, number>>;
+    }[];
+  };
 }
 
 export interface CoreDto {
@@ -54,6 +64,7 @@ export interface CoreDto {
 export interface ItemDto {
   readonly itemInstanceId: string;
   readonly itemDefinitionId: string;
+  readonly rarity?: string;
   readonly createdAt: string;
 }
 
