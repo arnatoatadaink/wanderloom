@@ -135,6 +135,47 @@ The frontend client ID is public configuration, not a secret.
 
 A real Google OAuth Web client ID must still be configured for manual browser acceptance.
 
+## Local acceptance checkpoint — 2026-09-25
+
+Codex synchronized `feat/cp-31-google-oidc-integration` with `origin` through
+commit `8aa8c47c93dae55e7e05fab0dcfd672ccf5a527a` and prepared local
+configuration safeguards in commit `23f5ac9`.
+
+Manual acceptance is **pending**. No real Google Client ID was available in the
+local environment, so the Web and Worker Google configuration files were not
+created and no browser identity flow was exercised.
+
+Pending user-side work:
+
+- provide or create a Google OAuth 2.0 Web application Client ID
+- authorize the exact Vite Web origin used for local acceptance
+- use that Client ID in the ignored `apps/web/.env.local` and
+  `workers/api/.dev.vars` files
+- complete the Google sign-in/link/restore browser steps in the acceptance
+  runbook
+
+The current Codex WSL session also does not expose a runnable Linux Node/pnpm
+binary; the available Windows Node binary cannot be launched from this
+session. Therefore the local Wrangler migration and dev-server commands remain
+to be run from a working project Node/pnpm environment.
+
+Evidence at this checkpoint:
+
+- branch: `feat/cp-31-google-oidc-integration`
+- synced source commit: `8aa8c47c93dae55e7e05fab0dcfd672ccf5a527a`
+- Web origin: not started
+- Worker origin: not started
+- real Google Client ID configured: no
+- migration `0002_external_identity_links.sql`: pending
+- A guest creation/link: pending
+- B fresh-state restore: pending
+- C progression/inventory preservation: pending
+- D idempotent relink: pending
+- E unlinked-account restore: not exercised
+- post-restore M2 regression: pending
+- blocking issue: `Real Google Client ID / authorized origin configuration pending`
+- repository `git diff --check`: PASS
+
 ## Tests added
 
 ### Worker verifier
