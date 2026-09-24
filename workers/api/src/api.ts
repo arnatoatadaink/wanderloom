@@ -18,6 +18,7 @@ import {
 import { D1AtomicMutationRepository, type D1AtomicDatabaseLike } from "./persistence/d1-atomic-mutation-repository";
 import { D1CoreSnapshotRepository, type D1DatabaseLike } from "./persistence/d1-core-snapshot-repository";
 import { D1InventorySnapshotRepository } from "./persistence/d1-inventory-snapshot-repository";
+import { D1ExternalIdentityLinkRepository, type D1IdentityDatabaseLike } from "./persistence/d1-external-identity-link-repository";
 import { bootstrapGuestPlayer } from "./services/guest-bootstrap";
 import {
   M1_SMOKE_RECENT_ARCHIVE_RETENTION,
@@ -31,12 +32,15 @@ import {
   resolveM2SmokeRewardConfiguration
 } from "./m1-smoke-rules";
 import { persistStartedExploration } from "./services/start-exploration-persistence";
+import { linkGoogleAccount } from "./services/link-google-account";
+import { GoogleJwksIdTokenVerifier, GoogleOidcVerificationError, type GoogleIdTokenVerifier } from "./google-oidc";
 import { apiError, apiErrorStatus, type ApiErrorCode } from "./api-contract";
 
-export type ApiDatabase = D1DatabaseLike & D1AtomicDatabaseLike;
+export type ApiDatabase = D1DatabaseLike & D1AtomicDatabaseLike & D1IdentityDatabaseLike;
 
 export interface ApiEnv {
   readonly DB: ApiDatabase;
+  readonly GOOGLE_CLIENT_ID?: string;
 }
 
 export interface ApiRuntime {
@@ -59,6 +63,7 @@ export interface ApiRuntime {
   readonly progressionRule?: ProgressionRule;
   readonly rewardConfiguration?: ZoneRewardConfiguration;
   readonly equipmentEffectDefinitions?: readonly EquipmentEffectDefinition[];
+  readonly googleIdTokenVerifier?: GoogleIdTokenVerifier;
 }
 
 const defaultRuntime: ApiRuntime = {
@@ -118,7 +123,8 @@ const defaultRuntime: ApiRuntime = {
   recentArchiveRetention: M1_SMOKE_RECENT_ARCHIVE_RETENTION,
   progressionRule: M2_SMOKE_PROGRESSION_RULE,
   rewardConfiguration: M2_SMOKE_REWARD_CONFIGURATION,
-  equipmentEffectDefinitions: M2_SMOKE_EQUIPMENT_EFFECT_DEFINITIONS
+  equipmentEffectDefinitions: M2_SMOKE_EQUIPMENT_EFFECT_DEFINITIONS,
+  googleIdTokenVerifier: new GoogleJwksIdTokenVerifier()
 };
 
 function json(body: unknown, status = 200): Response {
@@ -179,6 +185,45 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
       const playerId = getPlayerId(request);
       if (playerId === null) {
         return errorResponse("missing_player_id");
+      }
+
+      if (method === "POST" && url.pathname === "/api/auth/google/link") {
+        if (!env.GOOGLE_CLIENT_ID || !runtime.googleIdTokenVerifier) {
+          return notReady("google_oidc");
+        }
+
+        const body = (await request.json()) as {
+          readonly credential?: string;
+        };
+        if (!body.credential) {
+          return errorResponse("invalid_request");
+        }
+
+        const repository = new D1ExternalIdentityLinkRepository(env.DB);
+        try {
+          const result = await linkGoogleAccount({
+            playerId,
+            credential: body.credential,
+            clientId: env.GOOGLE_CLIENT_ID,
+            linkedAt: runtime.now(),
+            verifier: runtime.googleIdTokenVerifier,
+            repository
+          });
+
+          if ("code" in result) {
+            return errorResponse(result.code, result.details);
+          }
+
+          return json({
+            ok: true,
+            accountLink: result
+          });
+        } catch (error) {
+          if (error instanceof GoogleOidcVerificationError) {
+            return errorResponse("invalid_google_credential");
+          }
+          throw error;
+        }
       }
 
       const coreRepository = new D1CoreSnapshotRepository(env.DB);
