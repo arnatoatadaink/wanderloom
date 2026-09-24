@@ -26,3 +26,5 @@ export * from "./domain/rarity-zone-rewards";
 export * from "./domain/equipment-effects";
 
 export * from "./domain/balance-simulator";
+
+export * from "./domain/balance-scenarios";
