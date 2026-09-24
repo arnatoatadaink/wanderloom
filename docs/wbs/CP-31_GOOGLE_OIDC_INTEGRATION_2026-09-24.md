@@ -113,13 +113,27 @@ to be configured in the Worker environment.
 
 No real Google client ID or secret is committed to the repository.
 
-## Current UI boundary
+## Browser UI integration
 
-CP-31 currently implements the secure Worker/API and Web-client integration boundary.
+Google Identity Services browser wiring is now implemented behind an opt-in client ID configuration.
 
-It does **not yet render/load the Google Identity Services button/script in the Wanderloom UI**.
+When `VITE_GOOGLE_CLIENT_ID` is absent or blank:
 
-That interactive browser wiring should be added only after the API/security path passes local validation, then covered by CP-31 browser acceptance before closure.
+- the Google script is not loaded
+- no Google account UI is rendered
+- the existing guest-only flow remains unchanged
+
+When configured:
+
+- a new browser with no stored Wanderloom player is offered **Google restore** or **Continue as guest**
+- an existing guest player sees a **Google link** control
+- the Google Identity Services script is loaded only when needed
+- the returned Google `credential` is sent to the Worker API
+- successful restore replaces the Web client's active player ID and persists it to localStorage
+
+The frontend client ID is public configuration, not a secret.
+
+A real Google OAuth Web client ID must still be configured for manual browser acceptance.
 
 ## Tests added
 
@@ -146,10 +160,13 @@ Tests generate an ephemeral RSA key pair and use fake discovery/JWKS responses.
 
 ### Web client
 
-1 test:
+4 tests total added in CP-31:
 
 - link + restore methods
 - restored playerId becomes the active client identity
+- Google bridge remains disabled without a client ID
+- blank client IDs are disabled
+- configured client ID enables browser wiring
 
 ## API error additions
 
@@ -171,23 +188,30 @@ Run:
 Expected increase from CP-30:
 
 - Worker: +9 tests
-- Web: +1 test
+- Web: +4 tests
 - game-core: unchanged
 
-Expected total if all tests are discovered: **107 tests**.
+Expected total if all tests are discovered: **110 tests**.
 
-## Exit criteria for implementation phase
+## Exit criteria
 
-Before interactive Google UI wiring:
+Automated implementation acceptance requires:
 
 - Google JWKS verifier typechecks and tests pass
 - migration applies with existing migrations
 - real-D1 link/retry/conflict/restore tests pass
 - Web API client link/restore tests pass
+- Google browser bridge configuration tests pass
 - all pre-existing M2/M3 regressions stay green
 - workspace typecheck/build/diff-check pass
 
-After that, the remaining CP-31 work is interactive Google Identity Services browser wiring and manual acceptance with an actual configured Google Client ID.
+Final CP-31 closure additionally requires manual browser acceptance with an actual configured Google Client ID:
+
+1. new browser/profile can restore an already linked Wanderloom player
+2. existing guest can link to Google
+3. refresh preserves/restores the expected player identity
+4. no guest progress is overwritten during link
+5. invalid/foreign identity conflicts surface as stable API errors
 
 ## Next after CP-31
 
