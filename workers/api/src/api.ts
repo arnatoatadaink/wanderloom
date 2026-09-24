@@ -30,6 +30,7 @@ import {
   resolveM2SmokeRewardConfiguration
 } from "./m1-smoke-rules";
 import { persistStartedExploration } from "./services/start-exploration-persistence";
+import { apiError, apiErrorStatus, type ApiErrorCode } from "./api-contract";
 
 export type ApiDatabase = D1DatabaseLike & D1AtomicDatabaseLike;
 
@@ -128,21 +129,22 @@ function getPlayerId(request: Request): PlayerId | null {
   return value === null || value.length === 0 ? null : (value as PlayerId);
 }
 
-function notReady(feature: string): Response {
-  return json(
-    {
-      ok: false,
-      error: {
-        code: "not_ready",
-        feature
-      }
-    },
-    501
-  );
+function errorResponse(
+  code: ApiErrorCode,
+  details?: Readonly<Record<string, unknown>>
+): Response {
+  return json(apiError(code, details), apiErrorStatus(code));
 }
 
-function mutationErrorStatus(code: string): number {
-  return code === "version_conflict" || code === "already_claimed" ? 409 : 400;
+function notReady(feature: string): Response {
+  return errorResponse("not_ready", { feature });
+}
+
+function mutationErrorResponse(
+  error: { readonly code: ApiErrorCode } & Readonly<Record<string, unknown>>
+): Response {
+  const { code, ...details } = error;
+  return errorResponse(code, details);
 }
 
 export function createApi(runtime: ApiRuntime = defaultRuntime) {
@@ -174,15 +176,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
 
       const playerId = getPlayerId(request);
       if (playerId === null) {
-        return json(
-          {
-            ok: false,
-            error: {
-              code: "missing_player_id"
-            }
-          },
-          401
-        );
+        return errorResponse("missing_player_id");
       }
 
       const coreRepository = new D1CoreSnapshotRepository(env.DB);
@@ -191,21 +185,21 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
       if (method === "GET" && url.pathname === "/api/state") {
         const core = await coreRepository.findByPlayerId(playerId);
         return core === null
-          ? json({ ok: false, error: { code: "player_not_found" } }, 404)
+          ? errorResponse("player_not_found")
           : json({ ok: true, core });
       }
 
       if (method === "GET" && url.pathname === "/api/inventory") {
         const inventory = await inventoryRepository.findByPlayerId(playerId);
         return inventory === null
-          ? json({ ok: false, error: { code: "player_not_found" } }, 404)
+          ? errorResponse("player_not_found")
           : json({ ok: true, inventory });
       }
 
       if (method === "GET" && url.pathname === "/api/explorations/current") {
         const core = await coreRepository.findByPlayerId(playerId);
         return core === null
-          ? json({ ok: false, error: { code: "player_not_found" } }, 404)
+          ? errorResponse("player_not_found")
           : json({ ok: true, exploration: core.activeExploration });
       }
 
@@ -219,7 +213,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
       if (method === "POST" && url.pathname === "/api/explorations") {
         const core = await coreRepository.findByPlayerId(playerId);
         if (core === null) {
-          return json({ ok: false, error: { code: "player_not_found" } }, 404);
+          return errorResponse("player_not_found");
         }
 
         const body = (await request.json()) as {
@@ -227,7 +221,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           readonly durationId?: string;
         };
         if (!body.zoneId || !body.durationId) {
-          return json({ ok: false, error: { code: "invalid_request" } }, 400);
+          return errorResponse("invalid_request");
         }
 
         const zoneId = body.zoneId as ZoneId;
@@ -262,10 +256,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
 
         return result.ok
           ? json({ ok: true, core: result.value }, 201)
-          : json(
-              { ok: false, error: result.error },
-              mutationErrorStatus(result.error.code)
-            );
+          : mutationErrorResponse(result.error);
       }
 
       const claimMatch = url.pathname.match(
@@ -279,7 +270,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
         ]);
 
         if (core === null || inventory === null) {
-          return json({ ok: false, error: { code: "player_not_found" } }, 404);
+          return errorResponse("player_not_found");
         }
 
         const exploration = core.activeExploration;
@@ -299,31 +290,18 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
             .first<{ claimed_at: string }>();
 
           if (claimed !== null) {
-            return json(
-              {
-                ok: false,
-                error: {
-                  code: "already_claimed",
-                  explorationId: requestedExplorationId,
-                  claimedAt: claimed.claimed_at
-                }
-              },
-              409
-            );
+            return errorResponse("already_claimed", {
+              explorationId: requestedExplorationId,
+              claimedAt: claimed.claimed_at
+            });
           }
 
-          return json(
-            {
-              ok: false,
-              error: {
-                code: "invalid_exploration_state",
-                explorationId: requestedExplorationId,
-                actualState: exploration === null ? "idle" : "different_exploration",
-                allowedStates: ["ready_to_claim"]
-              }
-            },
-            400
-          );
+          return errorResponse("invalid_exploration_state", {
+            explorationId: requestedExplorationId,
+            actualState:
+              exploration === null ? "idle" : "different_exploration",
+            allowedStates: ["ready_to_claim"]
+          });
         }
 
         const claimedAt = runtime.now();
@@ -347,10 +325,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
             : {})
         });
         if (!calculated.ok) {
-          return json(
-            { ok: false, error: calculated.error },
-            mutationErrorStatus(calculated.error.code)
-          );
+          return mutationErrorResponse(calculated.error);
         }
 
         if (runtime.recentArchiveRetention === null) {
@@ -380,16 +355,13 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
               inventory: calculated.value.nextInventory,
               archiveEntry: calculated.value.archiveEntry
             })
-          : json(
-              { ok: false, error: committed.error },
-              mutationErrorStatus(committed.error.code)
-            );
+          : mutationErrorResponse(committed.error);
       }
 
       if (method === "POST" && url.pathname === "/api/equipment") {
         const inventory = await inventoryRepository.findByPlayerId(playerId);
         if (inventory === null) {
-          return json({ ok: false, error: { code: "player_not_found" } }, 404);
+          return errorResponse("player_not_found");
         }
 
         const body = (await request.json()) as {
@@ -402,7 +374,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           !body.itemInstanceId ||
           !Number.isInteger(body.expectedInventoryStateVersion)
         ) {
-          return json({ ok: false, error: { code: "invalid_request" } }, 400);
+          return errorResponse("invalid_request");
         }
 
         const itemInstanceId = body.itemInstanceId as ItemInstanceId;
@@ -411,15 +383,11 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
         }
 
         if (inventory.stateVersion !== body.expectedInventoryStateVersion) {
-          return json({
-            ok: false,
-            error: {
-              code: "version_conflict",
-              snapshot: "inventory",
-              expectedVersion: body.expectedInventoryStateVersion,
-              actualVersion: inventory.stateVersion
-            }
-          }, 409);
+          return errorResponse("version_conflict", {
+            snapshot: "inventory",
+            expectedVersion: body.expectedInventoryStateVersion,
+            actualVersion: inventory.stateVersion
+          });
         }
 
         const equipped = equipItem({
@@ -429,7 +397,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           equippedAt: runtime.now()
         });
         if (!equipped.ok) {
-          return json({ ok: false, error: equipped.error }, 400);
+          return mutationErrorResponse(equipped.error);
         }
 
         const atomicRepository = new D1AtomicMutationRepository(env.DB, {
@@ -449,21 +417,10 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
               inventory: equipped.value.nextInventory,
               idempotent: false
             })
-          : json(
-              { ok: false, error: committed.error },
-              mutationErrorStatus(committed.error.code)
-            );
+          : mutationErrorResponse(committed.error);
       }
 
-      return json(
-        {
-          ok: false,
-          error: {
-            code: "not_found"
-          }
-        },
-        404
-      );
+      return errorResponse("not_found");
     }
   };
 }
