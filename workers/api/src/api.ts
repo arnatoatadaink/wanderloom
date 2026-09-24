@@ -182,6 +182,60 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
         );
       }
 
+      if (method === "POST" && url.pathname === "/api/auth/google/restore") {
+        if (!env.GOOGLE_CLIENT_ID || !runtime.googleIdTokenVerifier) {
+          return notReady("google_oidc");
+        }
+
+        const body = (await request.json()) as {
+          readonly credential?: string;
+        };
+        if (!body.credential) {
+          return errorResponse("invalid_request");
+        }
+
+        try {
+          const verified = await runtime.googleIdTokenVerifier.verify(
+            body.credential,
+            env.GOOGLE_CLIENT_ID
+          );
+          const identityRepository =
+            new D1ExternalIdentityLinkRepository(env.DB);
+          const link = await identityRepository.findByIdentity({
+            provider: "google",
+            subject: verified.subject
+          });
+          if (link === null) {
+            return errorResponse("linked_account_not_found", {
+              provider: "google"
+            });
+          }
+
+          const coreRepository = new D1CoreSnapshotRepository(env.DB);
+          const inventoryRepository =
+            new D1InventorySnapshotRepository(env.DB);
+          const [core, inventory] = await Promise.all([
+            coreRepository.findByPlayerId(link.playerId),
+            inventoryRepository.findByPlayerId(link.playerId)
+          ]);
+          if (core === null || inventory === null) {
+            return errorResponse("player_not_found");
+          }
+
+          return json({
+            ok: true,
+            playerId: link.playerId,
+            core,
+            inventory
+          });
+        } catch (error) {
+          if (error instanceof GoogleOidcVerificationError) {
+            return errorResponse("invalid_google_credential");
+          }
+          throw error;
+        }
+      }
+
       const playerId = getPlayerId(request);
       if (playerId === null) {
         return errorResponse("missing_player_id");
