@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress**
+**Accepted / Complete**
 
 ## Objective
 
@@ -71,27 +71,28 @@ This CP preserves existing `error.code` values.
 
 The response shape gains `retryable` and moves code-specific metadata under `details`. Tests must prove current callers still classify errors correctly.
 
-## Validation required
+## Acceptance evidence
 
-Run:
+User-reported local WSL validation on 2026-09-24:
 
-- `pnpm -r typecheck`
-- `pnpm -r test`
-- `pnpm -r build`
-- `git diff --check`
-- `git status --short`
+- `pnpm -r typecheck`: PASS across Web / game-core / Worker.
+- `pnpm -r test`: PASS.
+  - Web: 3 files / 11 tests.
+  - game-core: 17 files / 50 tests.
+  - Worker: 12 files / 30 tests.
+  - Total: **91 tests PASS**.
+- `pnpm -r build`: PASS on the preceding CP-29 validation run.
+  - Web production build: PASS.
+  - game-core TypeScript build: PASS.
+  - Worker Wrangler dry-run: PASS.
+- `git diff --check`: clean.
+- `workers/api/.wrangler/` remains an untracked local runtime directory and is not repository content.
 
-Expected test increase from CP-28:
-
-- Worker: +3 tests
-- Web: +1 test
-- game-core: unchanged
-
-If all tests are discovered, expected total: **91 tests**.
+During validation, CP-19/26 regression expectations were updated to the new stable error envelope (`code` + `retryable` + `details`). The underlying gameplay/persistence behavior remained green.
 
 ## Exit criteria
 
-CP-29 closes when:
+All CP-29 exit criteria are satisfied:
 
 - central API error-code/status/retry contract passes tests
 - Worker routes use the central error envelope
@@ -99,5 +100,7 @@ CP-29 closes when:
 - v0.0.2 / CP-28 regressions remain green
 - ADR and static-quality baseline are recorded
 - full workspace validation passes
+
+CP-29 is **Accepted / Complete**.
 
 Next CP: **CP-30 Guest → Linked Account Domain**.
