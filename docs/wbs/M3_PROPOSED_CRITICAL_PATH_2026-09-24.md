@@ -2,11 +2,11 @@
 
 ## Status
 
-**Proposed / not yet accepted**
+**Accepted / implementation authorized**
 
 Baseline: `v0.0.2`.
 
-## Proposed M3 objective
+## M3 objective
 
 **Productionized Persistent Solo Slice**
 
@@ -23,7 +23,7 @@ Move the accepted M2 solo loop from provisional local/guest-oriented behavior to
 M3 intentionally does **not** add Party, Caravan, permanent owned-equipment loss,
 premium currency, rewarded ads, or AI gameplay.
 
-## Proposed critical path
+## Accepted critical path
 
 ```text
 v0.0.2
@@ -216,12 +216,21 @@ May be researched without blocking M3:
 
 They should not be merged into M3 implementation solely because they are available.
 
-## Open decisions before accepting this CP
+## Accepted planning decisions
 
-1. Is M3 primarily **identity/archive productionization**, as proposed here?
-2. Which OIDC provider should be the first integration target?
-3. Is Google appDataFolder still the first long-term archive backend?
-4. Should production balance tuning itself be a release blocker, or should CP-28 only establish measured candidate values?
-5. Should standard advertising be kept outside M3 or added only after account/archive reliability?
+1. **M3 scope:** identity/archive productionization is the M3 milestone objective.
+2. **First OIDC provider:** Google.
+   - The provider-independent CP-30 contract remains authoritative.
+   - Google-specific identity/OAuth details stay outside game-core.
+   - Current Google documentation confirms its OpenID Connect provider remains available.
+3. **First long-term archive backend:** Google Drive `appDataFolder`.
+   - Current Google Drive documentation confirms `appDataFolder` remains an application-specific per-user storage space accessed with the `drive.appdata` OAuth scope.
+   - D1 remains gameplay-authoritative; appDataFolder is historical/long-term archive storage.
+4. **Balance:** CP-28 must establish measured candidate configurations and identify obvious smoke-only values. Subjective/final production tuning is **not** a hard M3 release blocker unless measurements reveal a correctness/economy defect.
+5. **Advertising:** standard advertising remains outside the M3 critical path. It may be researched in parallel and considered after account/archive reliability is accepted.
 
-Until these are accepted, this document is a proposal rather than an implementation mandate.
+## Implementation authorization
+
+The M3 critical path is accepted.
+
+Implementation begins with **CP-28 Balance Measurement Baseline** from the fixed `v0.0.2` lineage.
