@@ -16,6 +16,7 @@ export interface EquipmentState {
 export interface ItemInstance {
   readonly itemInstanceId: ItemInstanceId;
   readonly itemDefinitionId: ItemDefinitionId;
+  readonly rarity?: string;
   readonly createdAt: IsoDateTime;
 }
 
