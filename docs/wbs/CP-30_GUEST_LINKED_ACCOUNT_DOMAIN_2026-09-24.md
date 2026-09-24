@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress**
+**Accepted / Complete**
 
 ## Objective
 
@@ -98,27 +98,26 @@ CP-30 does not include:
 - archive integration
 - UI login flow
 
-## Validation required
+## Acceptance evidence
 
-Run:
+User-reported local WSL validation on 2026-09-24:
 
-- `pnpm -r typecheck`
-- `pnpm -r test`
-- `pnpm -r build`
-- `git diff --check`
-- `git status --short`
-
-Expected increase from CP-29:
-
-- game-core: +6 tests
-- Web: unchanged
-- Worker: existing API-contract test count unchanged
-
-If all tests are discovered, expected total is **97 tests**.
+- `pnpm -r typecheck`: PASS across Web / game-core / Worker.
+- `pnpm -r test`: PASS.
+  - Web: 3 files / 11 tests.
+  - game-core: 18 files / 56 tests.
+  - Worker: 12 files / 30 tests.
+  - Total: **97 tests PASS**.
+- `pnpm -r build`: PASS.
+  - Web production build: PASS.
+  - game-core TypeScript build: PASS.
+  - Worker Wrangler dry-run: PASS.
+- `git diff --check`: clean.
+- `workers/api/.wrangler/` remains an untracked local runtime directory and is not repository content.
 
 ## Exit criteria
 
-CP-30 closes when:
+All CP-30 exit criteria are satisfied:
 
 - first-link behavior preserves the existing player ID
 - retry is idempotent
@@ -127,5 +126,7 @@ CP-30 closes when:
 - provider-specific data does not enter game-core
 - API conflict codes are reserved
 - full workspace validation passes
+
+CP-30 is **Accepted / Complete**.
 
 Next CP: **CP-31 OIDC Integration**.
