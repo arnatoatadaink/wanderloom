@@ -111,11 +111,11 @@ describe("CP-10 API wiring", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       ok: true,
-      zones: [
-        {
+      zones: expect.arrayContaining([
+        expect.objectContaining({
           zoneId: "m1-smoke-frontier",
-          durations: [
-            {
+          durations: expect.arrayContaining([
+            expect.objectContaining({
               durationId: "short",
               durationMs: 300000,
               risk: {
@@ -127,10 +127,20 @@ describe("CP-10 API wiring", () => {
                 }
               },
               rarities: ["Common", "Rare"]
-            }
-          ]
-        }
-      ]
+            })
+          ])
+        }),
+        expect.objectContaining({
+          zoneId: "m2-moss-hollow",
+          durations: expect.arrayContaining([
+            expect.objectContaining({
+              durationId: "long",
+              durationMs: 600000,
+              rarities: ["Uncommon", "Epic"]
+            })
+          ])
+        })
+      ])
     });
   });
 });

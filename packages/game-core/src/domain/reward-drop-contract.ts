@@ -32,6 +32,7 @@ export interface DropGenerationInput {
 
 export interface GeneratedDrop {
   readonly itemDefinitionId: ItemDefinitionId;
+  readonly rarity?: string;
 }
 
 export interface DropGenerationResult {
@@ -48,6 +49,9 @@ export function instantiateDrop(input: InstantiateDropInput): ItemInstance {
   return {
     itemInstanceId: input.itemInstanceId,
     itemDefinitionId: input.generatedDrop.itemDefinitionId,
+    ...(input.generatedDrop.rarity
+      ? { rarity: input.generatedDrop.rarity }
+      : {}),
     createdAt: input.createdAt
   };
 }
