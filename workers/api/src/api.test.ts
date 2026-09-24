@@ -92,7 +92,8 @@ describe("CP-10 API wiring", () => {
     await expect(response.json()).resolves.toEqual({
       ok: false,
       error: {
-        code: "missing_player_id"
+        code: "missing_player_id",
+        retryable: false
       }
     });
   });
