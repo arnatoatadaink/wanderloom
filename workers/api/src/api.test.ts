@@ -12,6 +12,10 @@ class FakeStatement {
     return null;
   }
 
+  async all<T>(): Promise<{ results: T[] }> {
+    return { results: [] };
+  }
+
   async run(): Promise<{ meta: { changes: number } }> {
     return { meta: { changes: 1 } };
   }
