@@ -11,6 +11,7 @@ import {
   type ExplorationId,
   type ExplorationResolution,
   type ItemInstanceId,
+  type MutationError,
   type PlayerId,
   type ZoneId
 } from "@wanderloom/game-core";
@@ -140,11 +141,12 @@ function notReady(feature: string): Response {
   return errorResponse("not_ready", { feature });
 }
 
-function mutationErrorResponse(
-  error: { readonly code: ApiErrorCode } & Readonly<Record<string, unknown>>
-): Response {
+function mutationErrorResponse(error: MutationError): Response {
   const { code, ...details } = error;
-  return errorResponse(code, details);
+  return errorResponse(
+    code,
+    details as Readonly<Record<string, unknown>>
+  );
 }
 
 export function createApi(runtime: ApiRuntime = defaultRuntime) {
