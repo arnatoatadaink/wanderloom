@@ -167,6 +167,64 @@ describe("CP-11/17 API client", () => {
 
     expect(observedHeader).toBe("player-1");
   });
+  it("links and restores Google identity through the API client", async () => {
+    const observed: string[] = [];
+    const client = new WanderloomApiClient(async (input) => {
+      const path = String(input);
+      observed.push(path);
+
+      if (path === "/api/auth/google/link") {
+        return Response.json({
+          ok: true,
+          accountLink: {
+            status: "linked",
+            provider: "google",
+            subject: "google-sub-1"
+          }
+        });
+      }
+
+      if (path === "/api/auth/google/restore") {
+        return Response.json({
+          ok: true,
+          playerId: "player-restored",
+          core: {
+            stateVersion: 3,
+            progression: { level: 2, exp: 5, gold: 9 },
+            activeExploration: null
+          },
+          inventory: {
+            stateVersion: 2,
+            equipment: { slots: {} },
+            items: []
+          }
+        });
+      }
+
+      return new Response(null, { status: 404 });
+    }, "player-guest");
+
+    await expect(
+      client.linkGoogleAccount("credential")
+    ).resolves.toMatchObject({
+      status: "linked",
+      provider: "google",
+      subject: "google-sub-1"
+    });
+
+    await expect(
+      client.restoreGoogleAccount("credential")
+    ).resolves.toMatchObject({
+      playerId: "player-restored"
+    });
+
+    expect(client.getPlayerId()).toBe("player-restored");
+    expect(observed).toEqual([
+      "/api/auth/google/link",
+      "/api/auth/google/restore"
+    ]);
+  });
+
   it("preserves API retryability and details on errors", async () => {
     const client = new WanderloomApiClient(async () =>
       Response.json(
