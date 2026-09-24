@@ -360,3 +360,34 @@ h2 {
   min-height: 38px;
   padding: 8px 12px;
 }
+
+
+.account-panel {
+  margin: 16px 0 18px;
+  padding: 14px;
+  border: 1px solid #2b3833;
+  border-radius: 14px;
+  background: rgba(24, 33, 29, 0.94);
+}
+
+.google-identity-host {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.account-entry {
+  gap: 12px;
+}
+
+.account-entry .secondary-action {
+  margin-top: 4px;
+}
+
+.account-status {
+  margin: -6px 0 12px;
+  color: #b8d7a8;
+  font-size: 0.78rem;
+}
