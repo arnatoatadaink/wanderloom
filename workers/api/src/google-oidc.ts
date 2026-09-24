@@ -59,6 +59,12 @@ function base64UrlBytes(value: string): Uint8Array {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 function decodeJsonPart<T>(value: string): T {
   const bytes = base64UrlBytes(value);
   return JSON.parse(new TextDecoder().decode(bytes)) as T;
@@ -161,8 +167,10 @@ export class GoogleJwksIdTokenVerifier implements GoogleIdTokenVerifier {
     const verified = await crypto.subtle.verify(
       "RSASSA-PKCS1-v1_5",
       key,
-      base64UrlBytes(signaturePart),
-      new TextEncoder().encode(`${headerPart}.${payloadPart}`)
+      toArrayBuffer(base64UrlBytes(signaturePart)),
+      toArrayBuffer(
+        new TextEncoder().encode(`${headerPart}.${payloadPart}`)
+      )
     );
 
     if (!verified) {
