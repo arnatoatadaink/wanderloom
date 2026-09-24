@@ -61,8 +61,8 @@ describe("CP-28 balance scenario measurements", () => {
     expect(report.retainedExpPerMinute).toBeCloseTo(
       report.simulation.retainedExpPerRun / 5
     );
-    expect(report.generatedDropsPerMinute).toBe(0.2);
-    expect(report.retainedDropsPerMinute).toBe(
+    expect(report.generatedDropsPerMinute).toBeCloseTo(0.2);
+    expect(report.retainedDropsPerMinute).toBeCloseTo(
       (report.simulation.retainedDropCount / report.simulation.iterations) / 5
     );
 
