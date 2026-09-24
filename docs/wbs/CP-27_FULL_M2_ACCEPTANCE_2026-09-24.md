@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress.
+**Accepted / Complete**
 
 ## Objective
 
@@ -49,17 +49,32 @@ All new zone names, duration values, reward weights, rarity weights, failure pro
 
 CP-27 validates the product loop and contract connectivity. It does not approve final production balance.
 
-## Acceptance dependency
+## Acceptance evidence
 
-CP-27 remains open until the complete workspace validation passes after these integration changes:
+User-reported WSL validation on 2026-09-24:
 
-- `pnpm -r typecheck`
-- `pnpm -r test`
-- `pnpm -r build`
-- `git diff --check`
-
-The CP-26 real-D1 failure/progression/retry regression must also remain green, because the CP-27 success/equip loop is combined with that evidence for the full success/failure acceptance boundary.
+- `pnpm -r typecheck`: PASS across game-core / web / Worker.
+- `pnpm -r test`: PASS.
+  - game-core: 16 files / 47 tests.
+  - web: 3 files / 10 tests.
+  - Worker: 10 files / 24 tests.
+  - total: **81 tests**.
+- CP-27 full M2 real-D1 acceptance loop: PASS.
+- CP-26 real-D1 failure/progression/retry regression: PASS.
+- CP-19 real-D1 playable-loop regression: PASS.
+- CP-18 claim/equipment race regression: PASS.
+- `git diff --check`: clean.
+- Previous build validation for this CP-27 implementation set:
+  - Web Vite production build: PASS.
+  - game-core TypeScript build: PASS.
+  - Worker Wrangler dry-run build: PASS.
+  - Worker dry-run upload: 46.88 KiB raw / 9.03 KiB gzip.
+- `workers/api/.wrangler/` remains an untracked local runtime directory and is not accepted as repository content.
 
 ## Exit
 
-If the full suite remains green, CP-27 can be marked **Accepted / Complete**, merged to `m2`, and the **M2 Solo Progression Slice** can be closed.
+All CP-27 acceptance conditions are satisfied.
+
+CP-27 is **Accepted / Complete**. Integration target is `m2`.
+
+After integration, the **M2 Solo Progression Slice** is complete. Final production balance remains intentionally unresolved and is not part of this acceptance.
