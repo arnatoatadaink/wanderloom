@@ -11,7 +11,8 @@ export const API_ERROR_CODES = [
   "invalid_equipment_slot",
   "item_not_owned",
   "external_identity_conflict",
-  "provider_link_conflict"
+  "provider_link_conflict",
+  "invalid_google_credential"
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
@@ -38,7 +39,8 @@ const STATUS_BY_CODE: Readonly<Record<ApiErrorCode, number>> = {
   invalid_equipment_slot: 400,
   item_not_owned: 400,
   external_identity_conflict: 409,
-  provider_link_conflict: 409
+  provider_link_conflict: 409,
+  invalid_google_credential: 401
 };
 
 const RETRYABLE_CODES = new Set<ApiErrorCode>([
