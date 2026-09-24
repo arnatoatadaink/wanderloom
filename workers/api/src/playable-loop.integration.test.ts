@@ -134,21 +134,21 @@ describe("CP-19 full M1 acceptance loop with real D1", () => {
     ).toBeLessThanOrEqual(CP13_PAYLOAD_BUDGET_BYTES.zoneCatalog);
     await expect(zonesResponse.clone().json()).resolves.toMatchObject({
       ok: true,
-      zones: [
-        {
+      zones: expect.arrayContaining([
+        expect.objectContaining({
           zoneId: "m1-smoke-frontier",
-          durations: [
-            {
+          durations: expect.arrayContaining([
+            expect.objectContaining({
               durationId: "short",
               preview: {
                 gold: { min: 5, max: 6 },
                 exp: { min: 10, max: 10 },
                 drops: { minItems: 1, maxItems: 1 }
               }
-            }
-          ]
-        }
-      ]
+            })
+          ])
+        })
+      ])
     });
 
     const startResponse = await api.fetch(

@@ -406,6 +406,15 @@ export class WanderloomApp {
         </select>
       </div>
 
+      ${duration?.risk ? `
+        <div class="subpanel">
+          <span class="field-label">Risk</span>
+          <strong>${Math.round(duration.risk.failureProbability * 100)}% failure</strong>
+          <p class="hint">On failure: keep ${Math.round(duration.risk.lossPolicy.retainedGoldRatio * 100)}% Gold / ${Math.round(duration.risk.lossPolicy.retainedExpRatio * 100)}% EXP; generated drops ${duration.risk.lossPolicy.retainGeneratedDrops ? "kept" : "lost"}.</p>
+          <p class="hint">Possible rarity: ${duration.rarities?.map(escapeHtml).join(", ") ?? "—"}</p>
+        </div>
+      ` : ""}
+
       <div class="metrics-grid">
         <div><span>Gold</span><strong>${duration ? formatRange(duration.preview.gold.min, duration.preview.gold.max) : "—"}</strong></div>
         <div><span>EXP</span><strong>${duration ? formatRange(duration.preview.exp.min, duration.preview.exp.max) : "—"}</strong></div>
@@ -455,6 +464,16 @@ export class WanderloomApp {
       <div class="progress-track" aria-hidden="true">
         <div class="progress-fill ${claimable ? "complete" : ""}"></div>
       </div>
+
+      ${exploration.characterSnapshot ? `
+        <div class="subpanel">
+          <span class="field-label">Effective stats</span>
+          <strong>${formatStats(exploration.characterSnapshot.stats)}</strong>
+          ${exploration.characterSnapshot.equipmentEffects?.length
+            ? `<p class="hint">Frozen equipment effects: ${exploration.characterSnapshot.equipmentEffects.length}</p>`
+            : ""}
+        </div>
+      ` : ""}
 
       <p class="hint">
         The server owns the end time and result. You can leave this screen and return later.
@@ -537,7 +556,7 @@ export class WanderloomApp {
               <div class="inventory-item">
                 <div>
                   <strong>${escapeHtml(item.itemDefinitionId)}</strong>
-                  <small>${escapeHtml(item.itemInstanceId.slice(0, 12))}</small>
+                  <small>${escapeHtml(item.rarity ?? "Unrated")} · ${escapeHtml(item.itemInstanceId.slice(0, 12))}</small>
                 </div>
                 <button
                   class="secondary-action inventory-action"
@@ -655,4 +674,13 @@ function escapeHtml(value: string): string {
 
 function formatRange(min: number, max: number): string {
   return min === max ? String(min) : `${min}–${max}`;
+}
+
+function formatStats(stats: Readonly<Record<string, number>>): string {
+  const entries = Object.entries(stats);
+  return entries.length === 0
+    ? "Base"
+    : entries
+        .map(([name, value]) => `${escapeHtml(name)} ${value}`)
+        .join(" · ");
 }

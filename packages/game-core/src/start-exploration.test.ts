@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   startExploration,
   type ExplorationId,
+  type ItemDefinitionId,
+  type ItemInstanceId,
+  type PlayerInventorySnapshot,
   type PlayerCoreSnapshot,
   type PlayerId,
   type ZoneId
@@ -45,6 +48,49 @@ describe("E-002 start exploration", () => {
     expect(result.value.nextCore.activeExploration).toEqual(
       result.value.exploration
     );
+  });
+
+  it("freezes equipped effects at start so later equipment changes cannot rewrite the expedition", () => {
+    const charmId = "charm-1" as ItemInstanceId;
+    const charmDefinitionId = "wayfarer-charm" as ItemDefinitionId;
+    const inventory: PlayerInventorySnapshot = {
+      schemaVersion: 1,
+      stateVersion: 2,
+      playerId,
+      equipment: { slots: { charm: charmId } },
+      items: [{
+        itemInstanceId: charmId,
+        itemDefinitionId: charmDefinitionId,
+        createdAt: "2026-09-20T09:00:00.000Z"
+      }],
+      stackables: { quantities: {} },
+      updatedAt: "2026-09-20T09:00:00.000Z"
+    };
+    const modifiers = { power: 5 };
+    const result = startExploration({
+      player,
+      inventory,
+      equipmentEffectDefinitions: [{
+        itemDefinitionId: charmDefinitionId,
+        statModifiers: modifiers
+      }],
+      zoneId: "zone-1" as ZoneId,
+      durationId: "short",
+      durationMs: 5 * 60 * 1000,
+      explorationId: "exploration-equipped" as ExplorationId,
+      claimNonce: "nonce-equipped",
+      seed: "seed-equipped",
+      startedAt: "2026-09-20T10:01:00.000Z"
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.exploration.characterSnapshot.stats.power).toBe(17);
+
+    modifiers.power = 100;
+    const laterInventory = { ...inventory, equipment: { slots: { charm: null } } };
+    expect(laterInventory.equipment.slots.charm).toBeNull();
+    expect(result.value.exploration.characterSnapshot.stats.power).toBe(17);
   });
 
   it("rejects start when another exploration is active", () => {

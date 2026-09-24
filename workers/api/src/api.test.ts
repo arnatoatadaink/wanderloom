@@ -97,7 +97,7 @@ describe("CP-10 API wiring", () => {
     });
   });
 
-  it("serves the provisional M1 smoke zone catalog", async () => {
+  it("serves the M2 smoke zone catalog with risk and rarity preview metadata", async () => {
     const api = createApi();
     const response = await api.fetch(
       new Request("https://example.test/api/zones", {
@@ -111,17 +111,36 @@ describe("CP-10 API wiring", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       ok: true,
-      zones: [
-        {
+      zones: expect.arrayContaining([
+        expect.objectContaining({
           zoneId: "m1-smoke-frontier",
-          durations: [
-            {
+          durations: expect.arrayContaining([
+            expect.objectContaining({
               durationId: "short",
-              durationMs: 300000
-            }
-          ]
-        }
-      ]
+              durationMs: 300000,
+              risk: {
+                failureProbability: 0.25,
+                lossPolicy: {
+                  retainedGoldRatio: 0.5,
+                  retainedExpRatio: 0.5,
+                  retainGeneratedDrops: false
+                }
+              },
+              rarities: ["Common", "Rare"]
+            })
+          ])
+        }),
+        expect.objectContaining({
+          zoneId: "m2-moss-hollow",
+          durations: expect.arrayContaining([
+            expect.objectContaining({
+              durationId: "long",
+              durationMs: 600000,
+              rarities: ["Uncommon", "Epic"]
+            })
+          ])
+        })
+      ])
     });
   });
 });
