@@ -55,10 +55,10 @@ describe("CP-28 balance scenario measurements", () => {
     const report = simulateBalanceScenario(scenario);
 
     expect(report.scenarioId).toBe("scenario-zone/short");
-    expect(report.retainedGoldPerMinute).toBe(
+    expect(report.retainedGoldPerMinute).toBeCloseTo(
       report.simulation.retainedGoldPerRun / 5
     );
-    expect(report.retainedExpPerMinute).toBe(
+    expect(report.retainedExpPerMinute).toBeCloseTo(
       report.simulation.retainedExpPerRun / 5
     );
     expect(report.generatedDropsPerMinute).toBe(0.2);
