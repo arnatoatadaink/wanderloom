@@ -315,7 +315,10 @@ describe("CP-19 full M1 acceptance loop with real D1", () => {
       ok: false,
       error: {
         code: "already_claimed",
-        explorationId: firstExplorationId
+        retryable: true,
+        details: {
+          explorationId: firstExplorationId
+        }
       }
     });
 
@@ -418,9 +421,12 @@ describe("CP-19 full M1 acceptance loop with real D1", () => {
       ok: false,
       error: {
         code: "version_conflict",
-        snapshot: "inventory",
-        expectedVersion: 1,
-        actualVersion: 2
+        retryable: true,
+        details: {
+          snapshot: "inventory",
+          expectedVersion: 1,
+          actualVersion: 2
+        }
       }
     });
 
@@ -441,7 +447,10 @@ describe("CP-19 full M1 acceptance loop with real D1", () => {
       ok: false,
       error: {
         code: "invalid_equipment_slot",
-        slot: "weapon"
+        retryable: false,
+        details: {
+          slot: "weapon"
+        }
       }
     });
 
@@ -462,7 +471,10 @@ describe("CP-19 full M1 acceptance loop with real D1", () => {
       ok: false,
       error: {
         code: "item_not_owned",
-        itemInstanceId: "missing-item"
+        retryable: false,
+        details: {
+          itemInstanceId: "missing-item"
+        }
       }
     });
 
