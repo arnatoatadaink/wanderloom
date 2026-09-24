@@ -97,7 +97,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     const playerId = await bootstrap(api);
 
     const response = await api.fetch(
-      request(playerId, "link-one"),
+      request(playerId, "link-persist"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -110,7 +110,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
       accountLink: {
         status: "linked",
         provider: "google",
-        subject: "google-sub:link-one"
+        subject: "google-sub:link-persist"
       }
     });
 
@@ -130,7 +130,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
 
     expect(row).toEqual({
       provider: "google",
-      subject: "google-sub:link-one",
+      subject: "google-sub:link-persist",
       player_id: playerId
     });
   });
@@ -140,7 +140,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     const playerId = await bootstrap(api);
 
     const first = await api.fetch(
-      request(playerId, "link-one"),
+      request(playerId, "link-idempotent"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -149,7 +149,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     expect(first.status).toBe(200);
 
     const retry = await api.fetch(
-      request(playerId, "link-one"),
+      request(playerId, "link-idempotent"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -162,7 +162,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
       accountLink: {
         status: "already_linked",
         provider: "google",
-        subject: "google-sub:link-one"
+        subject: "google-sub:link-idempotent"
       }
     });
   });
@@ -173,7 +173,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     const secondPlayer = await bootstrap(api);
 
     const first = await api.fetch(
-      request(firstPlayer, "link-one"),
+      request(firstPlayer, "link-conflict"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -182,7 +182,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     expect(first.status).toBe(200);
 
     const conflict = await api.fetch(
-      request(secondPlayer, "link-one"),
+      request(secondPlayer, "link-conflict"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -197,7 +197,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
         retryable: false,
         details: {
           provider: "google",
-          subject: "google-sub:link-one",
+          subject: "google-sub:link-idempotent",
           existingPlayerId: firstPlayer
         }
       }
@@ -209,7 +209,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     const playerId = await bootstrap(api);
 
     const first = await api.fetch(
-      request(playerId, "link-one"),
+      request(playerId, "link-provider-one"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -218,7 +218,7 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
     expect(first.status).toBe(200);
 
     const conflict = await api.fetch(
-      request(playerId, "link-two"),
+      request(playerId, "link-provider-two"),
       {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
@@ -235,6 +235,44 @@ describe("CP-31 Google OIDC account linking with real D1", () => {
           provider: "google",
           existingSubject: "google-sub:link-one"
         }
+      }
+    });
+  });
+
+  it("restores the linked player from a Google credential without a guest header", async () => {
+    const api = createApi(runtime);
+    const playerId = await bootstrap(api);
+
+    const linked = await api.fetch(
+      request(playerId, "link-restore"),
+      {
+        DB: env.DB as unknown as ApiDatabase,
+        GOOGLE_CLIENT_ID: "google-client-test"
+      }
+    );
+    expect(linked.status).toBe(200);
+
+    const restored = await api.fetch(
+      new Request("https://example.test/api/auth/google/restore", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ credential: "link-restore" })
+      }),
+      {
+        DB: env.DB as unknown as ApiDatabase,
+        GOOGLE_CLIENT_ID: "google-client-test"
+      }
+    );
+
+    expect(restored.status).toBe(200);
+    await expect(restored.json()).resolves.toMatchObject({
+      ok: true,
+      playerId,
+      core: {
+        playerId
+      },
+      inventory: {
+        playerId
       }
     });
   });
