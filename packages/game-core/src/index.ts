@@ -28,3 +28,5 @@ export * from "./domain/equipment-effects";
 export * from "./domain/balance-simulator";
 
 export * from "./domain/balance-scenarios";
+
+export * from "./domain/account-linking";
