@@ -16,6 +16,15 @@ export interface ZoneDurationDto {
   readonly durationId: string;
   readonly durationMs: number;
   readonly preview: RewardPreviewDto;
+  readonly risk?: {
+    readonly failureProbability: number;
+    readonly lossPolicy: {
+      readonly retainedGoldRatio: number;
+      readonly retainedExpRatio: number;
+      readonly retainGeneratedDrops: boolean;
+    };
+  };
+  readonly rarities?: readonly string[];
 }
 
 export interface ZoneDto {

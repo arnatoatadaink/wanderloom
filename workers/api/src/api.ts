@@ -2,7 +2,10 @@ import {
   calculateClaim,
   equipItem,
   instantiateDrop,
-  resolveSeededM1Exploration,
+  resolveSeededExpedition,
+  generateSeededRarityDrops,
+  type ProgressionRule,
+  type ZoneRewardConfiguration,
   type ActiveExploration,
   type ExplorationId,
   type ExplorationResolution,
@@ -17,6 +20,10 @@ import { bootstrapGuestPlayer } from "./services/guest-bootstrap";
 import {
   M1_SMOKE_RECENT_ARCHIVE_RETENTION,
   M1_SMOKE_ZONES,
+  M2_SMOKE_ZONES,
+  M2_PREVIEW_LOSS_POLICY,
+  M2_SMOKE_PROGRESSION_RULE,
+  M2_SMOKE_REWARD_CONFIGURATION,
   resolveM1SmokeDurationMs
 } from "./m1-smoke-rules";
 import { persistStartedExploration } from "./services/start-exploration-persistence";
@@ -44,6 +51,8 @@ export interface ApiRuntime {
     createItemInstanceId: () => ItemInstanceId
   ) => ExplorationResolution | null;
   readonly recentArchiveRetention: number | null;
+  readonly progressionRule?: ProgressionRule;
+  readonly rewardConfiguration?: ZoneRewardConfiguration;
 }
 
 const defaultRuntime: ApiRuntime = {
@@ -55,28 +64,49 @@ const defaultRuntime: ApiRuntime = {
   createItemInstanceId: () => crypto.randomUUID() as ItemInstanceId,
   resolveDurationMs: resolveM1SmokeDurationMs,
   resolveExploration: (exploration, claimedAt, createItemInstanceId) => {
-    const resolved = resolveSeededM1Exploration({
+    const resolved = resolveSeededExpedition({
       seed: exploration.seed,
       explorationId: exploration.explorationId,
       zoneId: exploration.zoneId,
-      durationId: exploration.durationId
+      durationId: exploration.durationId,
+      config: {
+        failureProbability: 0.25,
+        lossPolicy: M2_PREVIEW_LOSS_POLICY
+      }
     });
+    const generatedDrops = generateSeededRarityDrops({
+      seed: exploration.seed,
+      zoneId: exploration.zoneId,
+      durationId: exploration.durationId,
+      configuration: M2_SMOKE_REWARD_CONFIGURATION
+    });
+    const retainedDrops =
+      resolved.result === "success" ||
+      M2_PREVIEW_LOSS_POLICY.retainGeneratedDrops
+        ? generatedDrops
+        : [];
 
     return {
       result: resolved.result,
-      gold: resolved.gold,
-      exp: resolved.exp,
-      drops: resolved.generatedDrops.map((generatedDrop) =>
+      gold: resolved.rewards.retainedGold,
+      exp: resolved.rewards.retainedExp,
+      drops: retainedDrops.map((generatedDrop) =>
         instantiateDrop({
           generatedDrop,
           itemInstanceId: createItemInstanceId(),
           createdAt: claimedAt
         })
       ),
-      summaryMetrics: resolved.summaryMetrics
+      summaryMetrics: {
+        ...resolved.summaryMetrics,
+        generatedDropCount: generatedDrops.length,
+        retainedDropCount: retainedDrops.length
+      }
     };
   },
-  recentArchiveRetention: M1_SMOKE_RECENT_ARCHIVE_RETENTION
+  recentArchiveRetention: M1_SMOKE_RECENT_ARCHIVE_RETENTION,
+  progressionRule: M2_SMOKE_PROGRESSION_RULE,
+  rewardConfiguration: M2_SMOKE_REWARD_CONFIGURATION
 };
 
 function json(body: unknown, status = 200): Response {
@@ -172,7 +202,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
       if (method === "GET" && url.pathname === "/api/zones") {
         return json({
           ok: true,
-          zones: M1_SMOKE_ZONES
+          zones: M2_SMOKE_ZONES
         });
       }
 
@@ -196,7 +226,10 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           return notReady("server_zone_duration_resolution");
         }
 
-        const result = await persistStartedExploration(coreRepository, {
+        const inventory = runtime.rewardConfiguration
+      ? await inventoryRepository.findByPlayerId(playerId)
+      : null;
+    const result = await persistStartedExploration(coreRepository, {
           player: core,
           zoneId,
           durationId: body.durationId,
@@ -204,7 +237,8 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           explorationId: runtime.createExplorationId(),
           claimNonce: runtime.createClaimNonce(),
           seed: runtime.createSeed(),
-          startedAt: runtime.now()
+          startedAt: runtime.now(),
+          ...(inventory ? { inventory, equipmentEffectDefinitions: [] } : {})
         });
 
         return result.ok
@@ -288,7 +322,10 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           inventory,
           exploration,
           resolution,
-          claimedAt
+          claimedAt,
+          ...(runtime.progressionRule
+            ? { progressionRule: runtime.progressionRule }
+            : {})
         });
         if (!calculated.ok) {
           return json(

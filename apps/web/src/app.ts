@@ -406,6 +406,15 @@ export class WanderloomApp {
         </select>
       </div>
 
+      ${duration?.risk ? `
+        <div class="subpanel">
+          <span class="field-label">Risk</span>
+          <strong>${Math.round(duration.risk.failureProbability * 100)}% failure</strong>
+          <p class="hint">On failure: keep ${Math.round(duration.risk.lossPolicy.retainedGoldRatio * 100)}% Gold / ${Math.round(duration.risk.lossPolicy.retainedExpRatio * 100)}% EXP; generated drops ${duration.risk.lossPolicy.retainGeneratedDrops ? "kept" : "lost"}.</p>
+          <p class="hint">Possible rarity: ${duration.rarities?.map(escapeHtml).join(", ") ?? "—"}</p>
+        </div>
+      ` : ""}
+
       <div class="metrics-grid">
         <div><span>Gold</span><strong>${duration ? formatRange(duration.preview.gold.min, duration.preview.gold.max) : "—"}</strong></div>
         <div><span>EXP</span><strong>${duration ? formatRange(duration.preview.exp.min, duration.preview.exp.max) : "—"}</strong></div>
