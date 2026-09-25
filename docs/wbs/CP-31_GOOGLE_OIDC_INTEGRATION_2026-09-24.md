@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress**
+**Accepted / Complete — 2026-09-25**
 
 ## Objective
 
@@ -133,9 +133,12 @@ When configured:
 
 The frontend client ID is public configuration, not a secret.
 
-A real Google OAuth Web client ID must still be configured for manual browser acceptance.
+A real Google OAuth Web client ID was configured locally for manual browser acceptance.
 
-## Local acceptance checkpoint — 2026-09-25
+## Earlier local acceptance checkpoint — 2026-09-25
+
+The following checkpoint records the state before local setup was completed.
+The final acceptance evidence appears below it.
 
 Codex synchronized `feat/cp-31-google-oidc-integration` with `origin` through
 commit `8aa8c47c93dae55e7e05fab0dcfd672ccf5a527a` and prepared local
@@ -175,6 +178,43 @@ Evidence at this checkpoint:
 - post-restore M2 regression: pending
 - blocking issue: `Real Google Client ID / authorized origin configuration pending`
 - repository `git diff --check`: PASS
+
+## Final local acceptance — 2026-09-25 12:26 JST
+
+- Branch tested: `feat/cp-31-google-oidc-integration`, source commit `3e28057`
+  followed by the evidence commit `84331fd`.
+- Web origin: `http://localhost:5173`.
+- Worker origin: `http://localhost:8787`.
+- Real Google OAuth Web Client ID: configured in ignored local Web and Worker
+  files; Wrangler confirmed the `GOOGLE_CLIENT_ID` binding.
+- Migration `0002_external_identity_links.sql`: PASS in local D1.
+- A, guest creation and Google link: PASS; Worker logged guest bootstrap 201
+  and Google link 200.
+- B, fresh browser state restore: PASS; user reported `Google account restored.`
+  and Worker logged restore 200 followed by successful state and inventory reads.
+- C, player and rewards preserved: PASS. One Google identity link points to
+  player `b752dcfb-49ae-4f5b-8570-d989a8b58ed2`. After a post-restore
+  exploration, claim, and another Google restore, D1 retained level 1,
+  EXP 15, Gold 7, one inventory item, and one equipped slot. The user also
+  confirmed the received rewards remained visible after signing in again.
+- D, idempotent relink: PASS; the user saw `Google account already linked.`,
+  the repeated link returned HTTP 200, and D1 retained exactly one Google
+  identity link row.
+- E, unlinked account restore: HTTP 404 `linked_account_not_found` observed
+  before the first link; cross-player conflicts remain covered by automated
+  real-D1 tests.
+- Post-restore M2 regression: PASS; Worker logged exploration creation 201,
+  claim 200, equipment change 200, then restore 200 with zones, core,
+  inventory, and current exploration reads all 200.
+- Blocking defects: none. The Worker `fetch` receiver bug that initially
+  produced an HTML 500 was fixed and covered by a regression test.
+- Non-blocking observation: a `127.0.0.x` browser origin caused Google's
+  `origin_mismatch`; the registered `localhost` origin succeeded.
+- Final validation: workspace typecheck PASS; Web 15 tests, game-core 56,
+  Worker 40 (111 total) PASS; Web/game-core/Worker dry-run builds PASS;
+  `git diff --check` PASS.
+
+No OAuth secret, raw ID token, Google subject, or personal email is recorded.
 
 ## Tests added
 
@@ -232,7 +272,8 @@ Expected increase from CP-30:
 - Web: +4 tests
 - game-core: unchanged
 
-Expected total if all tests are discovered: **110 tests**.
+The original baseline was **110 tests**. The Worker fetch regression test
+raises the final total to **111 tests**.
 
 ## Exit criteria
 

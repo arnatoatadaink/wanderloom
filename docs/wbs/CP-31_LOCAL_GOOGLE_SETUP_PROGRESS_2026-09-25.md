@@ -2,7 +2,11 @@
 
 ## Status
 
-**Local setup in progress**
+**Local setup and manual acceptance complete — 2026-09-25**
+
+The final acceptance evidence is in
+`docs/wbs/CP-31_GOOGLE_OIDC_INTEGRATION_2026-09-24.md`. Earlier pending and
+error sections below are retained as a chronological troubleshooting record.
 
 ### Codex recheck — 2026-09-25
 
