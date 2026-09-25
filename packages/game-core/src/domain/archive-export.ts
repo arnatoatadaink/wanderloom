@@ -65,6 +65,56 @@ export type ArchiveExportLifecycle =
       readonly code: string;
     };
 
+export function initialArchiveExportLifecycle(): ArchiveExportLifecycle {
+  return {
+    status: "pending",
+    lastAttemptAt: null,
+    attemptCount: 0
+  };
+}
+
+export function markArchiveExportFailed(input: {
+  readonly previous: ArchiveExportLifecycle;
+  readonly attemptedAt: IsoDateTime;
+  readonly retryable: boolean;
+  readonly code: string;
+}): ArchiveExportLifecycle {
+  if (input.previous.status === "synced") {
+    throw new RangeError("synced archive export cannot transition to error");
+  }
+  if (input.code.trim().length === 0) {
+    throw new RangeError("archive export error code must not be empty");
+  }
+
+  return {
+    status: "error",
+    lastAttemptAt: input.attemptedAt,
+    attemptCount: input.previous.attemptCount + 1,
+    retryable: input.retryable,
+    code: input.code
+  };
+}
+
+export function markArchiveExportSynced(input: {
+  readonly previous: ArchiveExportLifecycle;
+  readonly syncedAt: IsoDateTime;
+  readonly remoteId: string;
+}): ArchiveExportLifecycle {
+  if (input.remoteId.trim().length === 0) {
+    throw new RangeError("archive export remoteId must not be empty");
+  }
+  if (input.previous.status === "synced") {
+    return input.previous;
+  }
+
+  return {
+    status: "synced",
+    syncedAt: input.syncedAt,
+    attemptCount: input.previous.attemptCount + 1,
+    remoteId: input.remoteId
+  };
+}
+
 export function archiveExportId(
   playerId: PlayerId,
   explorationId: ExplorationId
@@ -153,23 +203,44 @@ export function isArchiveExportEnvelopeV1(
   }
 
   const record = envelope.record as Partial<ArchiveExportRecordV1>;
+  if (
+    typeof record.schemaVersion !== "number" ||
+    typeof record.playerId !== "string" ||
+    record.playerId.length === 0 ||
+    typeof record.explorationId !== "string" ||
+    record.explorationId.length === 0 ||
+    typeof record.zoneId !== "string" ||
+    record.zoneId.length === 0 ||
+    typeof record.durationId !== "string" ||
+    record.durationId.length === 0 ||
+    typeof record.startedAt !== "string" ||
+    typeof record.endedAt !== "string" ||
+    typeof record.claimedAt !== "string" ||
+    typeof record.result !== "string" ||
+    typeof record.rewards !== "object" ||
+    record.rewards === null ||
+    typeof record.summaryMetrics !== "object" ||
+    record.summaryMetrics === null
+  ) {
+    return false;
+  }
+
+  const rewards = record.rewards as Partial<RewardSummary>;
+  if (
+    typeof rewards.gold !== "number" ||
+    typeof rewards.exp !== "number" ||
+    !Array.isArray(rewards.drops)
+  ) {
+    return false;
+  }
+
   return (
-    typeof record.schemaVersion === "number" &&
-    typeof record.playerId === "string" &&
-    record.playerId.length > 0 &&
-    typeof record.explorationId === "string" &&
-    record.explorationId.length > 0 &&
-    typeof record.zoneId === "string" &&
-    record.zoneId.length > 0 &&
-    typeof record.durationId === "string" &&
-    record.durationId.length > 0 &&
-    typeof record.startedAt === "string" &&
-    typeof record.endedAt === "string" &&
-    typeof record.claimedAt === "string" &&
-    typeof record.result === "string" &&
-    typeof record.rewards === "object" &&
-    record.rewards !== null &&
-    typeof record.summaryMetrics === "object" &&
-    record.summaryMetrics !== null
+    envelope.archiveId ===
+      archiveExportId(record.playerId as PlayerId, record.explorationId as ExplorationId) &&
+    envelope.idempotencyKey ===
+      archiveExportIdempotencyKey(
+        record.playerId as PlayerId,
+        record.explorationId as ExplorationId
+      )
   );
 }
