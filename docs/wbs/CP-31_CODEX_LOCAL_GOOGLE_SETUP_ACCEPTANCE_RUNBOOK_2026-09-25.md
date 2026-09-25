@@ -2,7 +2,7 @@
 
 ## Status
 
-**Ready for local execution by Codex**
+**Completed / Historical acceptance runbook**
 
 CP-31 automated implementation validation is green.
 
