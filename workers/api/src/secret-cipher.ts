@@ -9,6 +9,12 @@ function base64ToBytes(value: string): Uint8Array {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 export interface EncryptedSecret {
   readonly ciphertext: string;
   readonly iv: string;
@@ -32,9 +38,9 @@ export class AesGcmSecretCipher {
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encoded = new TextEncoder().encode(plaintext);
     const ciphertext = await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv },
+      { name: "AES-GCM", iv: toArrayBuffer(iv) },
       key,
-      encoded
+      toArrayBuffer(encoded)
     );
 
     return {
@@ -48,10 +54,10 @@ export class AesGcmSecretCipher {
     const plaintext = await crypto.subtle.decrypt(
       {
         name: "AES-GCM",
-        iv: base64ToBytes(secret.iv)
+        iv: toArrayBuffer(base64ToBytes(secret.iv))
       },
       key,
-      base64ToBytes(secret.ciphertext)
+      toArrayBuffer(base64ToBytes(secret.ciphertext))
     );
     return new TextDecoder().decode(plaintext);
   }
@@ -66,7 +72,7 @@ export class AesGcmSecretCipher {
       }
       this.keyPromise = crypto.subtle.importKey(
         "raw",
-        raw,
+        toArrayBuffer(raw),
         { name: "AES-GCM" },
         false,
         ["encrypt", "decrypt"]
