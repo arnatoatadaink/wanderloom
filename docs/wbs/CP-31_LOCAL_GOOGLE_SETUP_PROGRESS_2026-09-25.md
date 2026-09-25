@@ -58,6 +58,23 @@ Post-fix verification:
 The user still needs to retry with a real Google account and confirm the
 link/restore and player continuity acceptance steps.
 
+### Google browser acceptance progress — 2026-09-25 12:13 JST
+
+The user completed a guest flow and reported `Google account already linked.`
+on the second link attempt. After clearing browser cookies, the same Google
+account returned `Google account restored.`
+
+Worker logs confirm guest bootstrap HTTP 201, Google link HTTP 200 twice, and
+Google restore HTTP 200. The restored page then fetched zones, core,
+inventory, and current exploration with HTTP 200. Local D1 contains exactly
+one Google identity link, attached to player
+`b752dcfb-49ae-4f5b-8570-d989a8b58ed2`; core and inventory rows exist for
+that player. Its persisted core has Gold 2 and EXP 5 after an earlier
+exploration claim, showing nonzero progress remained available after restore.
+No Google subject, email, or token is recorded here.
+
+Post-restore M2 exploration and claim remain pending user confirmation.
+
 Automated CP-31 implementation validation is already green:
 
 - workspace typecheck: PASS
