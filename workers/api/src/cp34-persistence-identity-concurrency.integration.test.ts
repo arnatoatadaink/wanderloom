@@ -2,6 +2,7 @@ import { applyD1Migrations, env } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type {
+  ArchiveExportSink,
   ExplorationId,
   ItemInstanceId,
   PlayerId
@@ -13,6 +14,7 @@ import {
 } from "./api";
 import type { GoogleIdTokenVerifier } from "./google-oidc";
 import { D1ArchiveExportRepository } from "./persistence/d1-archive-export-repository";
+import { syncPlayerArchive } from "./services/sync-player-archive";
 
 declare module "cloudflare:test" {
   interface ProvidedEnv {
@@ -118,7 +120,7 @@ describe("CP-34 persistence and identity concurrency", () => {
     expect([firstPlayer, secondPlayer]).toContain(rows.results[0]?.player_id);
   });
 
-  it("keeps one stable archive acknowledgement under concurrent success recording", async () => {
+  it("serializes concurrent archive sync so the sink is called once", async () => {
     const db = env.DB as unknown as ApiDatabase;
     const playerId = "player-cp34-archive" as PlayerId;
     const explorationId = "exploration-cp34-archive" as ExplorationId;
@@ -160,30 +162,75 @@ describe("CP-34 persistence and identity concurrency", () => {
       JSON.stringify(archive)
     ).run();
 
-    const repository = new D1ArchiveExportRepository(db);
+    let releaseDelivery!: () => void;
+    let markEntered!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      markEntered = resolve;
+    });
+    const released = new Promise<void>((resolve) => {
+      releaseDelivery = resolve;
+    });
 
-    await Promise.all([
-      repository.recordSuccess({
-        playerId,
-        explorationId,
-        syncedAt: "2026-09-25T14:06:00.000Z",
-        remoteId: "remote-first"
-      }),
-      repository.recordSuccess({
-        playerId,
-        explorationId,
-        syncedAt: "2026-09-25T14:06:01.000Z",
-        remoteId: "remote-second"
-      })
-    ]);
+    let deliveryCalls = 0;
+    const sink: ArchiveExportSink = {
+      async deliver() {
+        deliveryCalls += 1;
+        markEntered();
+        await released;
+        return {
+          ok: true,
+          disposition: "created",
+          remoteId: "remote-cp34"
+        };
+      }
+    };
 
-    const state = await repository.findState(playerId, explorationId);
-    expect(state?.attemptCount).toBe(2);
-    expect(["remote-first", "remote-second"]).toContain(state?.remoteId);
-    expect([
-      "2026-09-25T14:06:00.000Z",
-      "2026-09-25T14:06:01.000Z"
-    ]).toContain(state?.syncedAt);
+    const firstRepository = new D1ArchiveExportRepository(db);
+    const secondRepository = new D1ArchiveExportRepository(db);
+    const now = () => "2026-09-25T14:06:00.000Z";
+
+    const first = syncPlayerArchive({
+      playerId,
+      repository: firstRepository,
+      sink,
+      now,
+      limit: 10
+    });
+
+    await entered;
+
+    const second = await syncPlayerArchive({
+      playerId,
+      repository: secondRepository,
+      sink,
+      now,
+      limit: 10
+    });
+
+    expect(second).toEqual({
+      attempted: 0,
+      synced: 0,
+      failed: 0,
+      skippedNonRetryable: 0
+    });
+    expect(deliveryCalls).toBe(1);
+
+    releaseDelivery();
+    await expect(first).resolves.toEqual({
+      attempted: 1,
+      synced: 1,
+      failed: 0,
+      skippedNonRetryable: 0
+    });
+
+    const state = await firstRepository.findState(playerId, explorationId);
+    expect(state).toMatchObject({
+      attemptCount: 1,
+      remoteId: "remote-cp34",
+      syncedAt: "2026-09-25T14:06:00.000Z",
+      deliveryLeaseToken: null,
+      deliveryLeaseUntil: null
+    });
 
     const row = await db.prepare(
       `SELECT sync_status, synced_at, archive_json
@@ -196,12 +243,13 @@ describe("CP-34 persistence and identity concurrency", () => {
     }>();
 
     expect(row?.sync_status).toBe("synced");
-    expect(row?.synced_at).toBe(state?.syncedAt);
+    expect(row?.synced_at).toBe("2026-09-25T14:06:00.000Z");
     expect(JSON.parse(row?.archive_json ?? "{}")).toMatchObject({
       sync: {
         status: "synced",
-        syncedAt: state?.syncedAt
+        syncedAt: "2026-09-25T14:06:00.000Z"
       }
     });
   });
+
 });
