@@ -45,6 +45,24 @@ export interface ArchiveExportEnvelopeV1 {
 
 export type ArchiveExportEnvelope = ArchiveExportEnvelopeV1;
 
+export type ArchiveExportDeliveryResult =
+  | {
+      readonly ok: true;
+      readonly disposition: "created" | "existing";
+      readonly remoteId: string;
+    }
+  | {
+      readonly ok: false;
+      readonly retryable: boolean;
+      readonly code: string;
+    };
+
+export interface ArchiveExportSink {
+  deliver(
+    envelope: ArchiveExportEnvelope
+  ): Promise<ArchiveExportDeliveryResult>;
+}
+
 export type ArchiveExportLifecycle =
   | {
       readonly status: "pending";
