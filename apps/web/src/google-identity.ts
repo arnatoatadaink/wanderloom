@@ -20,8 +20,28 @@ interface GoogleAccountsIdApi {
   ): void;
 }
 
+interface GoogleCodeResponse {
+  readonly code?: string;
+  readonly error?: string;
+}
+
+interface GoogleCodeClient {
+  requestCode(): void;
+}
+
+interface GoogleAccountsOAuth2Api {
+  initCodeClient(config: {
+    readonly client_id: string;
+    readonly scope: string;
+    readonly ux_mode: "popup";
+    readonly callback: (response: GoogleCodeResponse) => void;
+    readonly error_callback?: (error: { readonly type?: string }) => void;
+  }): GoogleCodeClient;
+}
+
 interface GoogleAccountsApi {
   readonly id: GoogleAccountsIdApi;
+  readonly oauth2: GoogleAccountsOAuth2Api;
 }
 
 interface GoogleApi {
@@ -44,6 +64,7 @@ export interface GoogleIdentityBridge {
     mode: "link" | "restore",
     onCredential: (credential: string) => void
   ): Promise<void>;
+  requestDriveAuthorization(): Promise<string>;
 }
 
 export class BrowserGoogleIdentityBridge implements GoogleIdentityBridge {
@@ -81,6 +102,47 @@ export class BrowserGoogleIdentityBridge implements GoogleIdentityBridge {
       shape: "rectangular",
       width: Math.min(360, Math.max(240, container.clientWidth || 320))
     });
+
+  async requestDriveAuthorization(): Promise<string> {
+    if (!this.enabled || this.clientId === null) {
+      throw new Error("Google Identity Services is not configured");
+    }
+
+    await loadGoogleIdentityScript();
+    const google = window.google;
+    if (!google) {
+      throw new Error("Google Identity Services failed to initialize");
+    }
+
+    return new Promise<string>((resolve, reject) => {
+      const client = google.accounts.oauth2.initCodeClient({
+        client_id: this.clientId as string,
+        scope:
+          "openid https://www.googleapis.com/auth/drive.appdata",
+        ux_mode: "popup",
+        callback: (response) => {
+          if (response.error) {
+            reject(new Error(`Google Drive authorization failed: ${response.error}`));
+            return;
+          }
+          if (!response.code) {
+            reject(new Error("Google Drive authorization returned no code"));
+            return;
+          }
+          resolve(response.code);
+        },
+        error_callback: (error) => {
+          reject(
+            new Error(
+              `Google Drive authorization popup failed: ${error.type ?? "unknown"}`
+            )
+          );
+        }
+      });
+      client.requestCode();
+    });
+  }
+
   }
 }
 
