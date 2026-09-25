@@ -24,6 +24,22 @@ function retryableStatus(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
 }
 
+async function failureCode(response: Response, operation: "list" | "create"): Promise<string> {
+  const base = `drive_${operation}_http_${response.status}`;
+  try {
+    const body = (await response.json()) as {
+      error?: { errors?: readonly { reason?: unknown }[] };
+    };
+    const reason = body.error?.errors?.[0]?.reason;
+    if (typeof reason === "string" && /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(reason)) {
+      return `${base}_${reason}`;
+    }
+  } catch {
+    // A response without a usable Drive error reason still has an HTTP status.
+  }
+  return base;
+}
+
 function escapeDriveQueryValue(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 }
@@ -81,7 +97,7 @@ export class GoogleDriveAppDataSink implements ArchiveExportSink {
       return {
         ok: false,
         retryable: retryableStatus(response.status),
-        code: `drive_list_http_${response.status}`
+        code: await failureCode(response, "list")
       };
     }
 
@@ -149,7 +165,7 @@ export class GoogleDriveAppDataSink implements ArchiveExportSink {
       return {
         ok: false,
         retryable: retryableStatus(response.status),
-        code: `drive_create_http_${response.status}`
+        code: await failureCode(response, "create")
       };
     }
 

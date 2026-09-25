@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress — real Google Drive sync failure under local investigation**
+**In progress — real Google Drive sync succeeded for two archives; final manual regression checks pending**
 
 M3 critical path position:
 
@@ -247,23 +247,27 @@ The link/restore Google identity flow remains separate from Drive authorization.
 
 ## Automated validation
 
-Latest user-reported local result:
+Latest validation after the 403 recovery change:
 
 ### Typecheck
 
 - Web: PASS
 - game-core: PASS
-- Worker: PASS
+- Worker: PASS (rerun)
 
 ### Tests
 
 ```text
 Web         16 PASS
 game-core   65 PASS
-Worker      52 PASS
+Worker      54 PASS
 ----------------
-Total      133 PASS
+Total      135 PASS
 ```
+
+The Web and game-core counts above are from the earlier local run; the Worker
+suite was rerun after the 403 recovery change. Both new cases passed: sanitized
+Google 403 reason capture and retry after renewed authorization.
 
 Worker suite includes:
 
@@ -281,13 +285,13 @@ Worker suite includes:
 
 - Web Vite production build: PASS
 - game-core TypeScript build: PASS
-- Worker Wrangler dry-run: PASS
+- Worker Wrangler dry-run: PASS (rerun after 403 recovery change)
 
 Observed Worker dry-run:
 
 ```text
-Total Upload: 80.21 KiB
-gzip:        15.69 KiB
+Total Upload: 81.02 KiB
+gzip:        15.91 KiB
 ```
 
 ### Working tree
@@ -362,24 +366,60 @@ This demonstrates that:
 - `/api/archive/sync` executed
 - two pending archive records were discovered and attempted
 
-It does **not** yet demonstrate successful appDataFolder persistence.
+At that point, it did **not** demonstrate successful appDataFolder persistence.
 
-## Current blocking issue
+## 403 investigation and resolution
 
-Real Google Drive sync currently reports:
+The initial real Google Drive sync reported:
 
 ```text
 0 synced
 2 failed
 ```
 
-Therefore CP-33 must remain **In progress**.
+CP-33 remained **In progress** while this failure was investigated.
 
-The exact provider-side failure code has not yet been recorded in this report.
+Local D1 inspection on 2026-09-25 found two failed attempts, both with
+`last_error_code = drive_list_http_403` and `last_error_retryable = 0`.
+Both rows have `remote_id = NULL` and `synced_at = NULL`. Their matching
+`recent_archive` rows remain `pending` with `synced_at = NULL`.
 
-The next local investigation must inspect `archive_export_state.last_error_code`.
+The encrypted Google authorization has a nonempty ciphertext (160 characters),
+a nonempty IV (16 characters), and a granted scope containing `drive.appdata`.
+These facts establish that authorization was stored, but they do not establish
+why Google rejected `files.list`. The previous response body was not retained.
 
-## Required next local checks
+The current sink now records a sanitized Google error `reason` suffix when one
+is present, such as `drive_list_http_403_accessNotConfigured`. Successful Drive
+reauthorization also makes existing unsynced 403 failures eligible for another
+attempt. The archive remains pending until remote success is confirmed.
+
+### Follow-up after renewed authorization
+
+At 2026-09-25 07:57:40–41 UTC, both affected rows reached attempt count 2.
+Their new `last_error_code` is `drive_list_http_403_accessNotConfigured`.
+Both still have `remote_id = NULL` and `synced_at = NULL`; all nine local
+archives remain `pending`. The Google response now points to the Drive API
+being unavailable in the Google Cloud project used by the OAuth client.
+
+The next action was enabling **Google Drive API** (`drive.googleapis.com`) in
+that project's API Library and retrying **Enable Drive archive**.
+
+### Follow-up after Google Drive API enablement
+
+The Web reported `Archive sync complete: 2 synced, 0 failed`.
+Local D1 inspection confirmed both previously failed rows now have distinct,
+nonempty `remote_id` values, `synced_at` timestamps, attempt count 3, and
+cleared error fields. Their `recent_archive` rows are `synced` with matching
+timestamps. Seven other local archives remain `pending`.
+Those seven belong to three other player IDs; the authorized player's two
+archives are both synced. The two stored remote IDs are distinct.
+
+This proves the real Drive delivery response and D1 transition for these two
+records. A repeated sync and post-sync gameplay check are still needed for
+the remaining manual acceptance criteria.
+
+## Diagnostic queries used during investigation
 
 ### A. Inspect archive export failure state
 
@@ -478,7 +518,8 @@ If D1 reports a Drive 403, verify:
 - authorization was granted by a configured test user
 - the selected account matches the linked Wanderloom Google account
 
-The exact correction should be based on the observed `last_error_code`, not guessed in advance.
+The observed Google response reason was `accessNotConfigured`. After the
+project's Drive API was enabled, the next sync succeeded for two archives.
 
 ## Local secret configuration
 
@@ -519,8 +560,9 @@ unsynced archive prune protection           ✅
 Google linked-account continuity            ✅
 Google Drive authorization flow reached     ✅
 encrypted refresh-token mechanism           ✅ automated
-real appDataFolder write                    ❌ not yet proven
-real D1 pending -> synced transition         ❌ not yet proven
+real appDataFolder write                    ✅ two confirmed Drive IDs
+real D1 pending -> synced transition         ✅ two rows
+403 reason from new Google response          ✅ accessNotConfigured; resolved
 manual duplicate-safe repeat sync            ⏳ pending
 post-real-sync gameplay regression            ⏳ pending
 ```
@@ -531,9 +573,9 @@ Do **not** mark CP-33 Accepted / Complete yet.
 
 CP-33 closes only after:
 
-1. provider failure reason is identified and resolved
-2. at least one real pending archive is successfully written to Google Drive `appDataFolder`
-3. D1 marks that archive synced only after remote confirmation
+1. provider failure reason is identified and resolved ✅
+2. at least one real pending archive is successfully written to Google Drive `appDataFolder` ✅
+3. D1 marks that archive synced only after remote confirmation ✅
 4. repeated sync does not create a duplicate logical archive
 5. core/inventory/reward state remains unchanged by archive retries
 6. gameplay continues normally after successful sync

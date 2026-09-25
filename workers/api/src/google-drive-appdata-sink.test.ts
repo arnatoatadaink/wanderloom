@@ -104,6 +104,21 @@ describe("GoogleDriveAppDataSink", () => {
     });
   });
 
+  it("retains a safe Google reason for a Drive 403", async () => {
+    const sink = new GoogleDriveAppDataSink({
+      accessToken: "token",
+      fetch: async () => Response.json({
+        error: { errors: [{ reason: "accessNotConfigured" }] }
+      }, { status: 403 })
+    });
+
+    await expect(sink.deliver(envelope())).resolves.toEqual({
+      ok: false,
+      retryable: false,
+      code: "drive_list_http_403_accessNotConfigured"
+    });
+  });
+
   it("rejects duplicate remote archive identities", async () => {
     const sink = new GoogleDriveAppDataSink({
       accessToken: "token",

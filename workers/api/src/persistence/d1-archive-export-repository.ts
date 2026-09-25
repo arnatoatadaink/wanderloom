@@ -103,6 +103,20 @@ export class D1ArchiveExportRepository {
     };
   }
 
+  async retryAfterAuthorization(playerId: PlayerId): Promise<void> {
+    await this.db
+      .prepare(
+        `UPDATE archive_export_state
+         SET last_error_retryable = 1
+         WHERE player_id = ?1
+           AND remote_id IS NULL
+           AND last_error_retryable = 0
+           AND last_error_code LIKE 'drive_%_http_403%'`
+      )
+      .bind(playerId)
+      .run();
+  }
+
   async recordFailure(input: {
     readonly playerId: PlayerId;
     readonly explorationId: ExplorationId;

@@ -433,6 +433,9 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
             authorizedAt: runtime.now()
           });
 
+          await new D1ArchiveExportRepository(env.DB)
+            .retryAfterAuthorization(playerId);
+
           return json({
             ok: true,
             authorized: true,

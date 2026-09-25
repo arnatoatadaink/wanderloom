@@ -240,4 +240,57 @@ describe("CP-33 archive sync with real D1", () => {
 
     await expect(repository.listPending(playerId, 10)).resolves.toEqual([]);
   });
+
+  it("retries a 403 archive after Drive authorization is renewed", async () => {
+    const db = env.DB as unknown as ApiDatabase;
+    const repository = new D1ArchiveExportRepository(db);
+    const entry = {
+      ...archiveEntry(),
+      explorationId: "exploration-cp33-403" as ExplorationId
+    };
+    await db.prepare(
+      `INSERT INTO recent_archive (
+         player_id, exploration_id, schema_version, zone_id, duration_id,
+         started_at, ended_at, claimed_at, result, sync_status, synced_at,
+         archive_json
+       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'pending', NULL, ?10)`
+    ).bind(
+      entry.playerId, entry.explorationId, entry.schemaVersion,
+      entry.zoneId, entry.durationId, entry.startedAt, entry.endedAt,
+      entry.claimedAt, entry.result, JSON.stringify(entry)
+    ).run();
+    await repository.recordFailure({
+      playerId,
+      explorationId: entry.explorationId,
+      attemptedAt: "2026-09-25T01:08:00.000Z",
+      retryable: false,
+      code: "drive_list_http_403_accessNotConfigured"
+    });
+
+    const sink = new SequenceSink([{
+      ok: true,
+      disposition: "created",
+      remoteId: "drive-cp33-recovered"
+    }]);
+    const input = {
+      playerId, repository, sink,
+      now: () => "2026-09-25T01:09:00.000Z",
+      limit: 10
+    };
+    await expect(syncPlayerArchive(input)).resolves.toMatchObject({
+      attempted: 0,
+      skippedNonRetryable: 1
+    });
+    await repository.retryAfterAuthorization(playerId);
+    await expect(syncPlayerArchive(input)).resolves.toMatchObject({
+      attempted: 1,
+      synced: 1
+    });
+    await expect(repository.findState(playerId, entry.explorationId))
+      .resolves.toMatchObject({
+        attemptCount: 2,
+        lastErrorCode: null,
+        remoteId: "drive-cp33-recovered"
+      });
+  });
 });
