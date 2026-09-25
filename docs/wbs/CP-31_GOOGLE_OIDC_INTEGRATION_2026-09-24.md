@@ -291,7 +291,7 @@ Final CP-31 closure additionally requires manual browser acceptance with an actu
 
 1. new browser/profile can restore an already linked Wanderloom player
 2. existing guest can link to Google
-3. refresh preserves/restores the expected player identity
+3. refresh and fresh-browser restore preserve the expected player identity
 4. no guest progress is overwritten during link
 5. invalid/foreign identity conflicts surface as stable API errors
 
