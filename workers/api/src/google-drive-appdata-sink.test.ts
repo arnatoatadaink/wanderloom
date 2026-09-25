@@ -51,16 +51,25 @@ describe("GoogleDriveAppDataSink", () => {
   });
 
   it("creates a JSON file in appDataFolder when no record exists", async () => {
-    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const requests: Array<{ url: string; init: RequestInit | undefined }> = [];
     const sink = new GoogleDriveAppDataSink({
       accessToken: "token",
       fetch: async (input, init) => {
         const url = String(input);
         requests.push({ url, init });
-        if (url.includes("/drive/v3/files?")) {
+        if (
+          url.startsWith("https://www.googleapis.com/drive/v3/files?")
+        ) {
           return Response.json({ files: [] });
         }
-        return Response.json({ id: "drive-created" });
+        if (
+          url.startsWith(
+            "https://www.googleapis.com/upload/drive/v3/files?"
+          )
+        ) {
+          return Response.json({ id: "drive-created" });
+        }
+        throw new Error(`unexpected Drive request: ${url}`);
       }
     });
 
