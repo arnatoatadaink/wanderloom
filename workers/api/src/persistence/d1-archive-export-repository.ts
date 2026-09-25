@@ -10,7 +10,7 @@ interface D1PreparedStatementLike {
   bind(...values: unknown[]): D1PreparedStatementLike;
   first<T>(): Promise<T | null>;
   all<T>(): Promise<{ results?: T[] }>;
-  run(): Promise<unknown>;
+  run(): Promise<{ readonly meta?: { readonly changes?: number } }>;
 }
 
 export interface D1ArchiveExportDatabaseLike {
@@ -29,6 +29,8 @@ interface ExportStateRow {
   last_error_retryable: number | null;
   remote_id: string | null;
   synced_at: string | null;
+  delivery_lease_token: string | null;
+  delivery_lease_until: string | null;
 }
 
 export interface ArchiveExportState {
@@ -38,6 +40,8 @@ export interface ArchiveExportState {
   readonly lastErrorRetryable: boolean | null;
   readonly remoteId: string | null;
   readonly syncedAt: string | null;
+  readonly deliveryLeaseToken?: string | null;
+  readonly deliveryLeaseUntil?: string | null;
 }
 
 export class D1ArchiveExportRepository {
@@ -80,7 +84,9 @@ export class D1ArchiveExportRepository {
                 last_error_code,
                 last_error_retryable,
                 remote_id,
-                synced_at
+                synced_at,
+                delivery_lease_token,
+                delivery_lease_until
          FROM archive_export_state
          WHERE player_id = ?1
            AND exploration_id = ?2
@@ -100,8 +106,77 @@ export class D1ArchiveExportRepository {
           ? null
           : row.last_error_retryable === 1,
       remoteId: row.remote_id,
-      syncedAt: row.synced_at
+      syncedAt: row.synced_at,
+      deliveryLeaseToken: row.delivery_lease_token,
+      deliveryLeaseUntil: row.delivery_lease_until
     };
+  }
+
+  async acquireDeliveryLease(input: {
+    readonly playerId: PlayerId;
+    readonly explorationId: ExplorationId;
+    readonly leaseToken: string;
+    readonly acquiredAt: string;
+    readonly leaseUntil: string;
+  }): Promise<boolean> {
+    const result = await this.db
+      .prepare(
+        `INSERT INTO archive_export_state (
+           player_id,
+           exploration_id,
+           attempt_count,
+           last_attempt_at,
+           last_error_code,
+           last_error_retryable,
+           remote_id,
+           synced_at,
+           delivery_lease_token,
+           delivery_lease_until
+         )
+         VALUES (?1, ?2, 0, NULL, NULL, NULL, NULL, NULL, ?3, ?5)
+         ON CONFLICT(player_id, exploration_id) DO UPDATE SET
+           delivery_lease_token = excluded.delivery_lease_token,
+           delivery_lease_until = excluded.delivery_lease_until
+         WHERE archive_export_state.remote_id IS NULL
+           AND (
+             archive_export_state.delivery_lease_token IS NULL
+             OR archive_export_state.delivery_lease_until IS NULL
+             OR archive_export_state.delivery_lease_until <= ?4
+           )`
+      )
+      .bind(
+        input.playerId,
+        input.explorationId,
+        input.leaseToken,
+        input.acquiredAt,
+        input.leaseUntil
+      )
+      .run();
+
+    return (result.meta?.changes ?? 0) === 1;
+  }
+
+  async releaseDeliveryLease(input: {
+    readonly playerId: PlayerId;
+    readonly explorationId: ExplorationId;
+    readonly leaseToken: string;
+  }): Promise<void> {
+    await this.db
+      .prepare(
+        `UPDATE archive_export_state
+         SET delivery_lease_token = NULL,
+             delivery_lease_until = NULL
+         WHERE player_id = ?1
+           AND exploration_id = ?2
+           AND delivery_lease_token = ?3
+           AND remote_id IS NULL`
+      )
+      .bind(
+        input.playerId,
+        input.explorationId,
+        input.leaseToken
+      )
+      .run();
   }
 
   async retryAfterAuthorization(playerId: PlayerId): Promise<void> {
@@ -124,33 +199,29 @@ export class D1ArchiveExportRepository {
     readonly attemptedAt: string;
     readonly retryable: boolean;
     readonly code: string;
+    readonly leaseToken?: string;
   }): Promise<void> {
     await this.db
       .prepare(
-        `INSERT INTO archive_export_state (
-           player_id,
-           exploration_id,
-           attempt_count,
-           last_attempt_at,
-           last_error_code,
-           last_error_retryable,
-           remote_id,
-           synced_at
-         )
-         VALUES (?1, ?2, 1, ?3, ?4, ?5, NULL, NULL)
-         ON CONFLICT(player_id, exploration_id) DO UPDATE SET
-           attempt_count = archive_export_state.attempt_count + 1,
-           last_attempt_at = excluded.last_attempt_at,
-           last_error_code = excluded.last_error_code,
-           last_error_retryable = excluded.last_error_retryable
-         WHERE archive_export_state.remote_id IS NULL`
+        `UPDATE archive_export_state
+         SET attempt_count = attempt_count + 1,
+             last_attempt_at = ?3,
+             last_error_code = ?4,
+             last_error_retryable = ?5,
+             delivery_lease_token = NULL,
+             delivery_lease_until = NULL
+         WHERE player_id = ?1
+           AND exploration_id = ?2
+           AND remote_id IS NULL
+           AND (?6 IS NULL OR delivery_lease_token = ?6)`
       )
       .bind(
         input.playerId,
         input.explorationId,
         input.attemptedAt,
         input.code,
-        input.retryable ? 1 : 0
+        input.retryable ? 1 : 0,
+        input.leaseToken ?? null
       )
       .run();
   }
@@ -160,41 +231,30 @@ export class D1ArchiveExportRepository {
     readonly explorationId: ExplorationId;
     readonly syncedAt: string;
     readonly remoteId: string;
+    readonly leaseToken?: string;
   }): Promise<void> {
     const recordState = this.db
       .prepare(
-        `INSERT INTO archive_export_state (
-           player_id,
-           exploration_id,
-           attempt_count,
-           last_attempt_at,
-           last_error_code,
-           last_error_retryable,
-           remote_id,
-           synced_at
-         )
-         VALUES (?1, ?2, 1, ?3, NULL, NULL, ?4, ?3)
-         ON CONFLICT(player_id, exploration_id) DO UPDATE SET
-           attempt_count = archive_export_state.attempt_count + 1,
-           last_attempt_at = excluded.last_attempt_at,
-           last_error_code = NULL,
-           last_error_retryable = NULL,
-           remote_id = CASE
-             WHEN archive_export_state.remote_id IS NULL
-               THEN excluded.remote_id
-             ELSE archive_export_state.remote_id
-           END,
-           synced_at = CASE
-             WHEN archive_export_state.synced_at IS NULL
-               THEN excluded.synced_at
-             ELSE archive_export_state.synced_at
-           END`
+        `UPDATE archive_export_state
+         SET attempt_count = attempt_count + 1,
+             last_attempt_at = ?3,
+             last_error_code = NULL,
+             last_error_retryable = NULL,
+             remote_id = COALESCE(remote_id, ?4),
+             synced_at = COALESCE(synced_at, ?3),
+             delivery_lease_token = NULL,
+             delivery_lease_until = NULL
+         WHERE player_id = ?1
+           AND exploration_id = ?2
+           AND remote_id IS NULL
+           AND (?5 IS NULL OR delivery_lease_token = ?5)`
       )
       .bind(
         input.playerId,
         input.explorationId,
         input.syncedAt,
-        input.remoteId
+        input.remoteId,
+        input.leaseToken ?? null
       );
 
     const markArchiveSynced = this.db
