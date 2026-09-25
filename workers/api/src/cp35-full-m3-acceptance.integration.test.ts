@@ -298,7 +298,7 @@ describe("CP-35 full M3 acceptance with real D1", () => {
          )
        ORDER BY name`
     ).all<{ name: string }>();
-    expect(tables.results.map((row) => row.name)).toEqual([
+    expect((tables.results ?? []).map((row) => row.name)).toEqual([
       "archive_export_state",
       "external_identity_links",
       "google_drive_authorizations",
@@ -312,7 +312,7 @@ describe("CP-35 full M3 acceptance with real D1", () => {
        WHERE name IN ('delivery_lease_token', 'delivery_lease_until')
        ORDER BY name`
     ).all<{ name: string }>();
-    expect(leaseColumns.results.map((row) => row.name)).toEqual([
+    expect((leaseColumns.results ?? []).map((row) => row.name)).toEqual([
       "delivery_lease_token",
       "delivery_lease_until"
     ]);
