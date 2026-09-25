@@ -2,14 +2,14 @@
 
 ## Status
 
-**In progress — real Google Drive sync succeeded for two archives; final manual regression checks pending**
+**Accepted / Complete — real Google Drive sync, repeat-sync idempotency, and post-sync gameplay regression confirmed**
 
 M3 critical path position:
 
 ```text
 CP-31 Google OIDC Integration              ✅ Accepted / merged
 CP-32 Archive Export Contract              ✅ Accepted / merged
-CP-33 appDataFolder Sync + Retry            🚧 In progress
+CP-33 appDataFolder Sync + Retry            ✅ Accepted / Complete
 CP-34 Persistence / Identity Concurrency    ⏳ Next
 CP-35 Full M3 Acceptance                    ⏳ Later
 ```
@@ -416,8 +416,34 @@ Those seven belong to three other player IDs; the authorized player's two
 archives are both synced. The two stored remote IDs are distinct.
 
 This proves the real Drive delivery response and D1 transition for these two
-records. A repeated sync and post-sync gameplay check are still needed for
-the remaining manual acceptance criteria.
+records.
+
+### Final manual acceptance
+
+A repeat sync was executed after the two rows were already synced. The Web
+reported:
+
+```text
+Archive sync complete: 0 synced, 0 failed.
+```
+
+The two previously synced rows retained the same remote IDs, the same synced
+timestamps, and attempt count 3. This confirms that already-synced records
+were not re-exported and no duplicate logical archive was created.
+
+A new exploration was then completed and claimed. Its new archive row appeared
+as `pending` with `synced_at = NULL`, confirming that gameplay claim
+completion does not depend on Drive synchronization.
+
+After **Enable Drive archive** was executed again, that newly claimed archive
+transitioned to `synced`, received a new nonempty Drive remote ID, had
+`attempt_count = 1`, and retained `last_error_code = NULL`.
+
+The player's core and inventory `updated_at` timestamps remained at the claim
+time rather than the later archive-sync time. This confirms that the archive
+sync did not mutate gameplay rewards, core progression, or inventory state.
+
+These observations complete the remaining CP-33 manual acceptance criteria.
 
 ## Diagnostic queries used during investigation
 
@@ -549,7 +575,7 @@ Current state:
 
 ```text
 Automated typecheck                         ✅
-133 automated tests                         ✅
+135 automated tests                         ✅
 Web/game-core/Worker build                  ✅
 0003 migration                              ✅
 0004 migration                              ✅
@@ -563,23 +589,24 @@ encrypted refresh-token mechanism           ✅ automated
 real appDataFolder write                    ✅ two confirmed Drive IDs
 real D1 pending -> synced transition         ✅ two rows
 403 reason from new Google response          ✅ accessNotConfigured; resolved
-manual duplicate-safe repeat sync            ⏳ pending
-post-real-sync gameplay regression            ⏳ pending
+manual duplicate-safe repeat sync            ✅ 0 synced / 0 failed; remote IDs unchanged
+post-real-sync gameplay regression            ✅ new claim pending first, then synced
 ```
 
 ## Exit boundary
 
-Do **not** mark CP-33 Accepted / Complete yet.
+**CP-33 Accepted / Complete.**
 
-CP-33 closes only after:
+Completed exit criteria:
 
-1. provider failure reason is identified and resolved ✅
-2. at least one real pending archive is successfully written to Google Drive `appDataFolder` ✅
-3. D1 marks that archive synced only after remote confirmation ✅
-4. repeated sync does not create a duplicate logical archive
-5. core/inventory/reward state remains unchanged by archive retries
-6. gameplay continues normally after successful sync
+1. provider failure reason identified and resolved ✅
+2. real pending archives written to Google Drive `appDataFolder` ✅
+3. D1 marked archives synced only after remote confirmation ✅
+4. repeated sync produced no duplicate logical archive ✅
+5. core/inventory/reward state remained unchanged by archive sync ✅
+6. gameplay continued normally after successful sync ✅
+7. a new claimed archive began pending and later synced successfully ✅
 
-After CP-33 acceptance, proceed to:
+Next:
 
 **CP-34 Persistence / Identity Concurrency**
