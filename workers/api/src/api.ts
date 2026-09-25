@@ -35,12 +35,27 @@ import { persistStartedExploration } from "./services/start-exploration-persiste
 import { linkGoogleAccount } from "./services/link-google-account";
 import { GoogleJwksIdTokenVerifier, GoogleOidcVerificationError, type GoogleIdTokenVerifier } from "./google-oidc";
 import { apiError, apiErrorStatus, type ApiErrorCode } from "./api-contract";
+import { GoogleOAuthClient, GoogleOAuthExchangeError } from "./google-oauth";
+import { GoogleDriveAppDataSink } from "./google-drive-appdata-sink";
+import { AesGcmSecretCipher } from "./secret-cipher";
+import {
+  D1ArchiveExportRepository,
+  type D1ArchiveExportDatabaseLike
+} from "./persistence/d1-archive-export-repository";
+import { D1GoogleDriveAuthorizationRepository } from "./persistence/d1-google-drive-authorization-repository";
+import { syncPlayerArchive } from "./services/sync-player-archive";
 
-export type ApiDatabase = D1DatabaseLike & D1AtomicDatabaseLike & D1IdentityDatabaseLike;
+export type ApiDatabase =
+  D1DatabaseLike &
+  D1AtomicDatabaseLike &
+  D1IdentityDatabaseLike &
+  D1ArchiveExportDatabaseLike;
 
 export interface ApiEnv {
   readonly DB: ApiDatabase;
   readonly GOOGLE_CLIENT_ID?: string;
+  readonly GOOGLE_CLIENT_SECRET?: string;
+  readonly ARCHIVE_TOKEN_ENCRYPTION_KEY?: string;
 }
 
 export interface ApiRuntime {
@@ -64,6 +79,7 @@ export interface ApiRuntime {
   readonly rewardConfiguration?: ZoneRewardConfiguration;
   readonly equipmentEffectDefinitions?: readonly EquipmentEffectDefinition[];
   readonly googleIdTokenVerifier?: GoogleIdTokenVerifier;
+  readonly googleOAuthClient?: GoogleOAuthClient;
 }
 
 const defaultRuntime: ApiRuntime = {
@@ -124,7 +140,8 @@ const defaultRuntime: ApiRuntime = {
   progressionRule: M2_SMOKE_PROGRESSION_RULE,
   rewardConfiguration: M2_SMOKE_REWARD_CONFIGURATION,
   equipmentEffectDefinitions: M2_SMOKE_EQUIPMENT_EFFECT_DEFINITIONS,
-  googleIdTokenVerifier: new GoogleJwksIdTokenVerifier()
+  googleIdTokenVerifier: new GoogleJwksIdTokenVerifier(),
+  googleOAuthClient: new GoogleOAuthClient()
 };
 
 function json(body: unknown, status = 200): Response {
