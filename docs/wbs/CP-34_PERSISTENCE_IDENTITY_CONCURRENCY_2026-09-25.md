@@ -2,13 +2,13 @@
 
 ## Status
 
-**Implementation baseline ready for local validation**
+**Accepted / Complete**
 
 ## Position
 
 ```text
 CP-33 appDataFolder Sync + Retry          ✅ Accepted / merged to m3
-CP-34 Persistence / Identity Concurrency  🚧 In progress
+CP-34 Persistence / Identity Concurrency  ✅ Accepted / Complete
 CP-35 Full M3 Acceptance                  ⏳ Next
 ```
 
@@ -187,5 +187,78 @@ Verify:
 - workspace typecheck/test/build/diff-check green
 
 After acceptance:
+
+**CP-35 Full M3 Acceptance**
+
+
+## Acceptance evidence
+
+Local validation completed successfully after the concurrency hardening changes.
+
+### Automated validation
+
+```text
+Web         16 PASS
+game-core   65 PASS
+Worker      58 PASS
+----------------
+Total      139 PASS
+```
+
+- workspace typecheck: PASS
+- workspace tests: PASS
+- Web production build: PASS
+- game-core build: PASS
+- Worker Wrangler dry-run: PASS
+- git diff check: clean
+- only expected local `workers/api/.wrangler/` runtime state remains untracked
+
+The CP-34 Worker integration suite passed all four cases:
+
+1. concurrent same Google subject across two players -> one owner + one stable conflict
+2. concurrent idempotent link for one player -> linked/already_linked convergence
+3. concurrent archive sync -> one sink delivery under D1 lease
+4. expired delivery lease -> successful lease recovery
+
+### Migration acceptance
+
+Applied locally:
+
+```text
+0005_archive_export_delivery_lease.sql ✅
+```
+
+`archive_export_state` now contains:
+
+- `delivery_lease_token`
+- `delivery_lease_until`
+
+Existing synced archive rows preserved their:
+
+- non-null `remote_id`
+- non-null `synced_at`
+- previous attempt counts
+
+and both new lease columns are NULL on idle synced rows.
+
+This confirms the migration is backward-compatible with CP-33 local data.
+
+## Final CP-34 status
+
+CP-34 exit criteria are satisfied:
+
+- concurrent identity link conflicts return stable domain outcomes instead of storage 500s ✅
+- same-player concurrent linking converges idempotently ✅
+- archive success acknowledgement is atomic across export state and recent archive ✅
+- concurrent archive sync invokes the external sink once per archive lease window ✅
+- expired delivery leases recover ✅
+- CP-18 gameplay concurrency regressions remain green ✅
+- CP-33 retry/archive regressions remain green ✅
+- migration 0005 applies cleanly to existing local data ✅
+- typecheck/test/build/diff-check all green ✅
+
+**CP-34 Accepted / Complete.**
+
+Next:
 
 **CP-35 Full M3 Acceptance**
