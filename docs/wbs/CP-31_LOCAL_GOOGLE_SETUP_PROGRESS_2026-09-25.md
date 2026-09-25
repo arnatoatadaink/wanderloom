@@ -4,6 +4,38 @@
 
 **Local setup in progress**
 
+### Codex recheck — 2026-09-25
+
+The earlier conclusion that Node/pnpm could not run in WSL was incorrect.
+Node `v22.20.0` is installed under `/home/y/.nvm/versions/node/v22.20.0/bin`
+and pnpm `10.17.1` under `/home/y/.local/share/pnpm`; neither was on the
+default PATH for the Codex shell.
+
+The local setup has now been restarted and verified:
+
+- `apps/web/.env.local` and `workers/api/.dev.vars` exist, are Git-ignored,
+  and contain matching non-empty Google Web Client IDs.
+- Wrangler 4.132.0 reports `Using secrets defined in .dev.vars` and shows
+  `env.GOOGLE_CLIENT_ID` as a hidden local binding.
+- Worker: `http://localhost:8787` ready.
+- Web: `http://localhost:5173` ready.
+- `GET /api/health` through the Vite proxy: HTTP 200.
+- `POST /api/auth/google/restore` with an empty JSON body through the Vite
+  proxy: HTTP 400 `invalid_request`. This confirms the prior `not_ready`
+  (HTTP 501) configuration failure is resolved; it does not prove real Google
+  credential validation or account restore.
+- Local D1 migrations `0001_initial.sql` and
+  `0002_external_identity_links.sql` are recorded; `external_identity_links`
+  exists. No Google identity link row existed at this checkpoint.
+- Workspace typecheck: PASS.
+- Tests: Web 15, game-core 56, Worker 39; total 110 PASS.
+- Web, game-core, and Worker dry-run builds: PASS.
+- `git diff --check`: PASS.
+
+Real Google link, fresh-browser restore, player continuity, idempotent relink,
+and post-restore M2 regression remain pending user browser interaction.
+CP-31 remains **In progress**.
+
 Automated CP-31 implementation validation is already green:
 
 - workspace typecheck: PASS
