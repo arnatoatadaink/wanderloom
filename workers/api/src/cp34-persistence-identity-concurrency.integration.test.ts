@@ -23,9 +23,11 @@ declare module "cloudflare:test" {
   }
 }
 
-class FixedGoogleVerifier implements GoogleIdTokenVerifier {
-  async verify(): Promise<{ readonly subject: string }> {
-    return { subject: "google-sub:cp34-race" };
+class CredentialGoogleVerifier implements GoogleIdTokenVerifier {
+  async verify(
+    credential: string
+  ): Promise<{ readonly subject: string }> {
+    return { subject: `google-sub:${credential}` };
   }
 }
 
@@ -44,7 +46,7 @@ const runtime: ApiRuntime = {
   resolveDurationMs: () => null,
   resolveExploration: () => null,
   recentArchiveRetention: 3,
-  googleIdTokenVerifier: new FixedGoogleVerifier()
+  googleIdTokenVerifier: new CredentialGoogleVerifier()
 };
 
 async function bootstrap(api: ReturnType<typeof createApi>): Promise<PlayerId> {
@@ -61,14 +63,17 @@ async function bootstrap(api: ReturnType<typeof createApi>): Promise<PlayerId> {
   return body.playerId;
 }
 
-function linkRequest(playerId: PlayerId): Request {
+function linkRequest(
+  playerId: PlayerId,
+  credential: string
+): Request {
   return new Request("https://example.test/api/auth/google/link", {
     method: "POST",
     headers: {
       "content-type": "application/json",
       "x-wanderloom-player-id": playerId
     },
-    body: JSON.stringify({ credential: "same-google-credential" })
+    body: JSON.stringify({ credential })
   });
 }
 
@@ -85,11 +90,11 @@ describe("CP-34 persistence and identity concurrency", () => {
     ]);
 
     const [first, second] = await Promise.all([
-      api.fetch(linkRequest(firstPlayer), {
+      api.fetch(linkRequest(firstPlayer, "shared-race"), {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
       }),
-      api.fetch(linkRequest(secondPlayer), {
+      api.fetch(linkRequest(secondPlayer, "shared-race"), {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
       })
@@ -112,7 +117,7 @@ describe("CP-34 persistence and identity concurrency", () => {
         `SELECT player_id
          FROM external_identity_links
          WHERE provider = 'google'
-           AND subject = 'google-sub:cp34-race'`
+           AND subject = 'google-sub:shared-race'`
       )
       .all<{ player_id: string }>();
 
@@ -125,11 +130,11 @@ describe("CP-34 persistence and identity concurrency", () => {
     const playerId = await bootstrap(api);
 
     const [first, second] = await Promise.all([
-      api.fetch(linkRequest(playerId), {
+      api.fetch(linkRequest(playerId, "same-player-race"), {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
       }),
-      api.fetch(linkRequest(playerId), {
+      api.fetch(linkRequest(playerId, "same-player-race"), {
         DB: env.DB as unknown as ApiDatabase,
         GOOGLE_CLIENT_ID: "google-client-test"
       })
