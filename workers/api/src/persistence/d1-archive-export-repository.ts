@@ -15,6 +15,7 @@ interface D1PreparedStatementLike {
 
 export interface D1ArchiveExportDatabaseLike {
   prepare(query: string): D1PreparedStatementLike;
+  batch(statements: D1PreparedStatementLike[]): Promise<readonly unknown[]>;
 }
 
 interface PendingArchiveRow {
@@ -160,7 +161,7 @@ export class D1ArchiveExportRepository {
     readonly syncedAt: string;
     readonly remoteId: string;
   }): Promise<void> {
-    await this.db
+    const recordState = this.db
       .prepare(
         `INSERT INTO archive_export_state (
            player_id,
@@ -178,34 +179,45 @@ export class D1ArchiveExportRepository {
            last_attempt_at = excluded.last_attempt_at,
            last_error_code = NULL,
            last_error_retryable = NULL,
-           remote_id = excluded.remote_id,
-           synced_at = excluded.synced_at`
+           remote_id = CASE
+             WHEN archive_export_state.remote_id IS NULL
+               THEN excluded.remote_id
+             ELSE archive_export_state.remote_id
+           END,
+           synced_at = CASE
+             WHEN archive_export_state.synced_at IS NULL
+               THEN excluded.synced_at
+             ELSE archive_export_state.synced_at
+           END`
       )
       .bind(
         input.playerId,
         input.explorationId,
         input.syncedAt,
         input.remoteId
-      )
-      .run();
+      );
 
-    await this.db
+    const markArchiveSynced = this.db
       .prepare(
         `UPDATE recent_archive
          SET sync_status = 'synced',
-             synced_at = ?3,
+             synced_at = COALESCE(synced_at, ?3),
              archive_json = json_set(
                archive_json,
                '$.sync.status',
                'synced',
                '$.sync.syncedAt',
-               ?3
+               COALESCE(synced_at, ?3)
              )
          WHERE player_id = ?1
            AND exploration_id = ?2
-           AND sync_status = 'pending'`
+           AND sync_status IN ('pending', 'synced')`
       )
-      .bind(input.playerId, input.explorationId, input.syncedAt)
-      .run();
+      .bind(input.playerId, input.explorationId, input.syncedAt);
+
+    // D1 batch gives one transactional boundary for export-state and
+    // recent-archive acknowledgement. A partial success cannot leave a
+    // remote_id recorded while the archive remains pending.
+    await this.db.batch([recordState, markArchiveSynced]);
   }
 }
