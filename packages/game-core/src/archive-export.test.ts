@@ -5,7 +5,10 @@ import {
   archiveExportId,
   archiveExportIdempotencyKey,
   createArchiveExportEnvelope,
+  initialArchiveExportLifecycle,
   isArchiveExportEnvelopeV1,
+  markArchiveExportFailed,
+  markArchiveExportSynced,
   parseArchiveExport,
   serializeArchiveExport,
   type ExplorationArchiveEntry,
@@ -133,5 +136,75 @@ describe("CP-32 archive export contract", () => {
     expect(() =>
       parseArchiveExport(JSON.stringify(malformed))
     ).toThrow(RangeError);
+  });
+
+  it("rejects envelopes whose immutable identity does not match the record", () => {
+    const mismatched = {
+      ...createArchiveExportEnvelope(entry),
+      archiveId: "exploration:another-player:another-exploration"
+    };
+
+    expect(isArchiveExportEnvelopeV1(mismatched)).toBe(false);
+  });
+
+  it("models pending to error to synced retry lifecycle", () => {
+    const pending = initialArchiveExportLifecycle();
+    expect(pending).toEqual({
+      status: "pending",
+      lastAttemptAt: null,
+      attemptCount: 0
+    });
+
+    const failed = markArchiveExportFailed({
+      previous: pending,
+      attemptedAt: "2026-09-25T00:06:00.000Z",
+      retryable: true,
+      code: "temporary_provider_error"
+    });
+    expect(failed).toEqual({
+      status: "error",
+      lastAttemptAt: "2026-09-25T00:06:00.000Z",
+      attemptCount: 1,
+      retryable: true,
+      code: "temporary_provider_error"
+    });
+
+    expect(
+      markArchiveExportSynced({
+        previous: failed,
+        syncedAt: "2026-09-25T00:07:00.000Z",
+        remoteId: "drive-file-1"
+      })
+    ).toEqual({
+      status: "synced",
+      syncedAt: "2026-09-25T00:07:00.000Z",
+      attemptCount: 2,
+      remoteId: "drive-file-1"
+    });
+  });
+
+  it("does not allow a synced export to regress to error", () => {
+    const synced = markArchiveExportSynced({
+      previous: initialArchiveExportLifecycle(),
+      syncedAt: "2026-09-25T00:06:00.000Z",
+      remoteId: "drive-file-1"
+    });
+
+    expect(() =>
+      markArchiveExportFailed({
+        previous: synced,
+        attemptedAt: "2026-09-25T00:07:00.000Z",
+        retryable: true,
+        code: "late_error"
+      })
+    ).toThrow(RangeError);
+
+    expect(
+      markArchiveExportSynced({
+        previous: synced,
+        syncedAt: "2026-09-25T00:08:00.000Z",
+        remoteId: "different-remote-id"
+      })
+    ).toEqual(synced);
   });
 });
