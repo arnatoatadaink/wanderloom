@@ -33,7 +33,10 @@ export class WanderloomApp {
     private readonly now: () => number = Date.now,
     private readonly googleIdentity: GoogleIdentityBridge = {
       enabled: false,
-      async render() {}
+      async render() {},
+      async requestDriveAuthorization() {
+        throw new Error("Google Identity Services is not configured");
+      }
     }
   ) {}
 
