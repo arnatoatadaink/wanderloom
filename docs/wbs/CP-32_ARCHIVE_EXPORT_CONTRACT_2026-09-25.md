@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress**
+**Accepted / Complete — 2026-09-25**
 
 ## Objective
 
@@ -240,3 +240,32 @@ CP-32 closes when:
 - workspace typecheck/test/build/diff-check pass
 
 Next CP: **CP-33 appDataFolder Sync + Retry**.
+
+
+## Final validation — 2026-09-25
+
+User-reported local validation:
+
+- workspace typecheck: PASS
+- Web: 4 files / 15 tests PASS
+- game-core: 19 files / 65 tests PASS
+- Worker: 14 files / 40 tests PASS
+- total: **120 tests PASS**
+- Web production build: PASS
+- game-core build: PASS
+- Worker Wrangler dry-run: PASS
+- `git diff --check`: no errors reported
+- only expected untracked local runtime path: `workers/api/.wrangler/`
+
+Observed Web build:
+
+- CSS: 4.45 kB raw / 1.60 kB gzip
+- JS: 20.75 kB raw / 5.89 kB gzip
+
+Observed Worker dry-run upload:
+
+- 58.25 KiB raw / 11.53 KiB gzip
+
+No blocking defects remain.
+
+CP-32 exit criteria are satisfied.
