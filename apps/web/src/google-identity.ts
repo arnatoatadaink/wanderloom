@@ -102,6 +102,7 @@ export class BrowserGoogleIdentityBridge implements GoogleIdentityBridge {
       shape: "rectangular",
       width: Math.min(360, Math.max(240, container.clientWidth || 320))
     });
+  }
 
   async requestDriveAuthorization(): Promise<string> {
     if (!this.enabled || this.clientId === null) {
@@ -141,8 +142,6 @@ export class BrowserGoogleIdentityBridge implements GoogleIdentityBridge {
       });
       client.requestCode();
     });
-  }
-
   }
 }
 
