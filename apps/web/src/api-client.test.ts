@@ -225,6 +225,63 @@ describe("CP-11/17 API client", () => {
     ]);
   });
 
+  it("authorizes Drive and requests archive sync with player identity", async () => {
+    const observed: Array<{
+      path: string;
+      headers: Headers;
+      body: unknown;
+    }> = [];
+    const client = new WanderloomApiClient(async (input, init) => {
+      const headers = new Headers(init?.headers);
+      const body = init?.body ? JSON.parse(String(init.body)) : null;
+      observed.push({ path: String(input), headers, body });
+
+      if (String(input) === "/api/archive/google/authorize") {
+        return Response.json({
+          ok: true,
+          authorized: true,
+          scope: "openid https://www.googleapis.com/auth/drive.appdata"
+        });
+      }
+
+      return Response.json({
+        ok: true,
+        sync: {
+          attempted: 1,
+          synced: 1,
+          failed: 0,
+          skippedNonRetryable: 0
+        }
+      });
+    }, "player-1");
+
+    await expect(
+      client.authorizeGoogleDrive("code-1", "http://localhost:5173")
+    ).resolves.toMatchObject({
+      authorized: true
+    });
+    await expect(client.syncArchive()).resolves.toEqual({
+      attempted: 1,
+      synced: 1,
+      failed: 0,
+      skippedNonRetryable: 0
+    });
+
+    expect(observed[0]?.headers.get("x-requested-with")).toBe(
+      "XmlHttpRequest"
+    );
+    expect(observed[0]?.headers.get("x-wanderloom-player-id")).toBe(
+      "player-1"
+    );
+    expect(observed[0]?.body).toEqual({
+      code: "code-1",
+      redirectUri: "http://localhost:5173"
+    });
+    expect(observed[1]?.headers.get("x-wanderloom-player-id")).toBe(
+      "player-1"
+    );
+  });
+
   it("preserves API retryability and details on errors", async () => {
     const client = new WanderloomApiClient(async () =>
       Response.json(
