@@ -203,17 +203,28 @@ export class D1ArchiveExportRepository {
   }): Promise<void> {
     await this.db
       .prepare(
-        `UPDATE archive_export_state
-         SET attempt_count = attempt_count + 1,
-             last_attempt_at = ?3,
-             last_error_code = ?4,
-             last_error_retryable = ?5,
-             delivery_lease_token = NULL,
-             delivery_lease_until = NULL
-         WHERE player_id = ?1
-           AND exploration_id = ?2
-           AND remote_id IS NULL
-           AND (?6 IS NULL OR delivery_lease_token = ?6)`
+        `INSERT INTO archive_export_state (
+           player_id,
+           exploration_id,
+           attempt_count,
+           last_attempt_at,
+           last_error_code,
+           last_error_retryable,
+           remote_id,
+           synced_at,
+           delivery_lease_token,
+           delivery_lease_until
+         )
+         VALUES (?1, ?2, 1, ?3, ?4, ?5, NULL, NULL, NULL, NULL)
+         ON CONFLICT(player_id, exploration_id) DO UPDATE SET
+           attempt_count = archive_export_state.attempt_count + 1,
+           last_attempt_at = excluded.last_attempt_at,
+           last_error_code = excluded.last_error_code,
+           last_error_retryable = excluded.last_error_retryable,
+           delivery_lease_token = NULL,
+           delivery_lease_until = NULL
+         WHERE archive_export_state.remote_id IS NULL
+           AND (?6 IS NULL OR archive_export_state.delivery_lease_token = ?6)`
       )
       .bind(
         input.playerId,
