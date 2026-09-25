@@ -13,7 +13,11 @@ export const API_ERROR_CODES = [
   "external_identity_conflict",
   "provider_link_conflict",
   "invalid_google_credential",
-  "linked_account_not_found"
+  "linked_account_not_found",
+  "invalid_google_drive_authorization",
+  "google_drive_identity_conflict",
+  "google_drive_offline_access_required",
+  "google_drive_not_authorized"
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
@@ -42,7 +46,11 @@ const STATUS_BY_CODE: Readonly<Record<ApiErrorCode, number>> = {
   external_identity_conflict: 409,
   provider_link_conflict: 409,
   invalid_google_credential: 401,
-  linked_account_not_found: 404
+  linked_account_not_found: 404,
+  invalid_google_drive_authorization: 401,
+  google_drive_identity_conflict: 409,
+  google_drive_offline_access_required: 400,
+  google_drive_not_authorized: 409
 };
 
 const RETRYABLE_CODES = new Set<ApiErrorCode>([

@@ -25,6 +25,8 @@ export class WanderloomApp {
   private tutorialEndsAtMs: number | null = null;
   private offerGoogleRestore = false;
   private accountStatusMessage: string | null = null;
+  private googleAccountReady = false;
+  private archiveStatusMessage: string | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -33,7 +35,10 @@ export class WanderloomApp {
     private readonly now: () => number = Date.now,
     private readonly googleIdentity: GoogleIdentityBridge = {
       enabled: false,
-      async render() {}
+      async render() {},
+      async requestDriveAuthorization() {
+        throw new Error("Google Identity Services is not configured");
+      }
     }
   ) {}
 
@@ -211,6 +216,7 @@ export class WanderloomApp {
         this.storage.setItem(PLAYER_STORAGE_KEY, restored.playerId);
         this.offerGoogleRestore = false;
         this.accountStatusMessage = "Google account restored.";
+        this.googleAccountReady = true;
         await this.loadRemoteState(false);
         return;
       }
@@ -220,6 +226,7 @@ export class WanderloomApp {
         linked.status === "already_linked"
           ? "Google account already linked."
           : "Google account linked.";
+      this.googleAccountReady = true;
       this.state = { ...this.state, busy: false, errorMessage: null };
       this.render();
     } catch (error) {
@@ -227,6 +234,22 @@ export class WanderloomApp {
     }
   }
 
+  private async authorizeAndSyncArchive(): Promise<void> {
+    this.state = { ...this.state, busy: true, errorMessage: null };
+    this.archiveStatusMessage = "Requesting Google Drive permission…";
+    this.render();
+
+    try {
+      const code = await this.googleIdentity.requestDriveAuthorization();
+      await this.api.authorizeGoogleDrive(code, window.location.origin);
+      const sync = await this.api.syncArchive();
+      this.archiveStatusMessage = `Archive sync complete: ${sync.synced} synced, ${sync.failed} failed.`;
+      this.state = { ...this.state, busy: false, errorMessage: null };
+      this.render();
+    } catch (error) {
+      this.fail(error);
+    }
+  }
   private async startExploration(): Promise<void> {
     const zoneId = this.state.selectedZoneId;
     const durationId = this.state.selectedDurationId;
@@ -503,6 +526,12 @@ export class WanderloomApp {
           <p class="hint">Link this guest progress to Google for restore on another browser.</p>
           ${this.accountStatusMessage ? `<p class="account-status">${escapeHtml(this.accountStatusMessage)}</p>` : ""}
           <div id="google-link-button" class="google-identity-host"></div>
+          ${this.googleAccountReady ? `
+            <button id="authorize-drive-archive" class="secondary-action" type="button" ${this.state.busy ? "disabled" : ""}>
+              Enable Drive archive
+            </button>
+            ${this.archiveStatusMessage ? `<p class="account-status">${escapeHtml(this.archiveStatusMessage)}</p>` : ""}
+          ` : ""}
         </div>
       ` : ""}
 
@@ -730,6 +759,12 @@ export class WanderloomApp {
     this.root
       .querySelector("#continue-as-guest")
       ?.addEventListener("click", () => void this.continueAsGuest());
+    this.root
+      .querySelector("#authorize-drive-archive")
+      ?.addEventListener(
+        "click",
+        () => void this.authorizeAndSyncArchive()
+      );
   }
 
   private async mountGoogleIdentity(): Promise<void> {

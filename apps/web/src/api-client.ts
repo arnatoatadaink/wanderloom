@@ -203,6 +203,48 @@ export class WanderloomApiClient {
     return body;
   }
 
+  async authorizeGoogleDrive(
+    code: string,
+    redirectUri: string
+  ): Promise<{ readonly authorized: true; readonly scope: string }> {
+    const body = await this.request<{
+      readonly ok: true;
+      readonly authorized: true;
+      readonly scope: string;
+    }>("/api/archive/google/authorize", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-requested-with": "XmlHttpRequest"
+      },
+      body: JSON.stringify({ code, redirectUri })
+    });
+    return {
+      authorized: body.authorized,
+      scope: body.scope
+    };
+  }
+
+  async syncArchive(): Promise<{
+    readonly attempted: number;
+    readonly synced: number;
+    readonly failed: number;
+    readonly skippedNonRetryable: number;
+  }> {
+    const body = await this.request<{
+      readonly ok: true;
+      readonly sync: {
+        readonly attempted: number;
+        readonly synced: number;
+        readonly failed: number;
+        readonly skippedNonRetryable: number;
+      };
+    }>("/api/archive/sync", {
+      method: "POST"
+    });
+    return body.sync;
+  }
+
   async getZones(): Promise<readonly ZoneDto[]> {
     const body = await this.request<{
       readonly ok: true;
