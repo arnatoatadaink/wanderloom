@@ -297,6 +297,223 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
         }
       }
 
+      if (
+        method === "POST" &&
+        url.pathname === "/api/archive/google/authorize"
+      ) {
+        if (
+          !env.GOOGLE_CLIENT_ID ||
+          !env.GOOGLE_CLIENT_SECRET ||
+          !env.ARCHIVE_TOKEN_ENCRYPTION_KEY ||
+          !runtime.googleIdTokenVerifier ||
+          !runtime.googleOAuthClient
+        ) {
+          return notReady("google_drive_oauth");
+        }
+
+        if (
+          request.headers.get("x-requested-with") !== "XmlHttpRequest"
+        ) {
+          return errorResponse("invalid_request", {
+            reason: "missing_requested_with"
+          });
+        }
+
+        const body = (await request.json()) as {
+          readonly code?: string;
+          readonly redirectUri?: string;
+        };
+        if (!body.code || !body.redirectUri) {
+          return errorResponse("invalid_request");
+        }
+
+        let redirectOrigin: string;
+        try {
+          const redirectUrl = new URL(body.redirectUri);
+          redirectOrigin = redirectUrl.origin;
+          if (redirectOrigin !== body.redirectUri) {
+            return errorResponse("invalid_request", {
+              reason: "redirect_uri_must_be_origin"
+            });
+          }
+        } catch {
+          return errorResponse("invalid_request", {
+            reason: "invalid_redirect_uri"
+          });
+        }
+
+        const requestOrigin = request.headers.get("origin");
+        if (requestOrigin !== null && requestOrigin !== redirectOrigin) {
+          return errorResponse("invalid_request", {
+            reason: "origin_mismatch"
+          });
+        }
+
+        const identityRepository =
+          new D1ExternalIdentityLinkRepository(env.DB);
+        const links = await identityRepository.listByPlayerId(playerId);
+        const googleLink = links.find(
+          (link) => link.identity.provider === "google"
+        );
+        if (!googleLink) {
+          return errorResponse("linked_account_not_found", {
+            provider: "google"
+          });
+        }
+
+        try {
+          const tokens = await runtime.googleOAuthClient.exchangeCode({
+            code: body.code,
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+            redirectUri: redirectOrigin
+          });
+
+          if (!tokens.idToken) {
+            return errorResponse("invalid_google_drive_authorization", {
+              reason: "missing_id_token"
+            });
+          }
+
+          const verified = await runtime.googleIdTokenVerifier.verify(
+            tokens.idToken,
+            env.GOOGLE_CLIENT_ID
+          );
+          if (verified.subject !== googleLink.identity.subject) {
+            return errorResponse("google_drive_identity_conflict", {
+              provider: "google"
+            });
+          }
+
+          const requiredScope =
+            "https://www.googleapis.com/auth/drive.appdata";
+          const scopes = new Set(
+            tokens.scope.split(/\s+/).filter((scope) => scope.length > 0)
+          );
+          if (!scopes.has(requiredScope)) {
+            return errorResponse("invalid_google_drive_authorization", {
+              reason: "drive_appdata_scope_missing"
+            });
+          }
+
+          const authorizationRepository =
+            new D1GoogleDriveAuthorizationRepository(env.DB);
+          const existing =
+            await authorizationRepository.findByPlayerId(playerId);
+
+          let encryptedRefreshToken:
+            | { readonly ciphertext: string; readonly iv: string }
+            | null = null;
+
+          if (tokens.refreshToken !== null) {
+            const cipher = new AesGcmSecretCipher(
+              env.ARCHIVE_TOKEN_ENCRYPTION_KEY
+            );
+            encryptedRefreshToken =
+              await cipher.encrypt(tokens.refreshToken);
+          } else if (existing !== null) {
+            encryptedRefreshToken = {
+              ciphertext: existing.refreshTokenCiphertext,
+              iv: existing.refreshTokenIv
+            };
+          }
+
+          if (encryptedRefreshToken === null) {
+            return errorResponse(
+              "google_drive_offline_access_required"
+            );
+          }
+
+          await authorizationRepository.upsert({
+            playerId,
+            refreshTokenCiphertext:
+              encryptedRefreshToken.ciphertext,
+            refreshTokenIv: encryptedRefreshToken.iv,
+            grantedScope: tokens.scope,
+            authorizedAt: runtime.now()
+          });
+
+          return json({
+            ok: true,
+            authorized: true,
+            scope: tokens.scope
+          });
+        } catch (error) {
+          if (
+            error instanceof GoogleOAuthExchangeError ||
+            error instanceof GoogleOidcVerificationError
+          ) {
+            return errorResponse(
+              "invalid_google_drive_authorization"
+            );
+          }
+          throw error;
+        }
+      }
+
+      if (
+        method === "POST" &&
+        url.pathname === "/api/archive/sync"
+      ) {
+        if (
+          !env.GOOGLE_CLIENT_ID ||
+          !env.GOOGLE_CLIENT_SECRET ||
+          !env.ARCHIVE_TOKEN_ENCRYPTION_KEY ||
+          !runtime.googleOAuthClient
+        ) {
+          return notReady("google_drive_sync");
+        }
+
+        const authorizationRepository =
+          new D1GoogleDriveAuthorizationRepository(env.DB);
+        const authorization =
+          await authorizationRepository.findByPlayerId(playerId);
+        if (authorization === null) {
+          return errorResponse("google_drive_not_authorized");
+        }
+
+        try {
+          const cipher = new AesGcmSecretCipher(
+            env.ARCHIVE_TOKEN_ENCRYPTION_KEY
+          );
+          const refreshToken = await cipher.decrypt({
+            ciphertext: authorization.refreshTokenCiphertext,
+            iv: authorization.refreshTokenIv
+          });
+          const tokens =
+            await runtime.googleOAuthClient.refreshAccessToken({
+              refreshToken,
+              clientId: env.GOOGLE_CLIENT_ID,
+              clientSecret: env.GOOGLE_CLIENT_SECRET
+            });
+
+          const repository =
+            new D1ArchiveExportRepository(env.DB);
+          const sink = new GoogleDriveAppDataSink({
+            accessToken: tokens.accessToken
+          });
+          const summary = await syncPlayerArchive({
+            playerId,
+            repository,
+            sink,
+            now: runtime.now,
+            limit: 10
+          });
+
+          return json({
+            ok: true,
+            sync: summary
+          });
+        } catch (error) {
+          if (error instanceof GoogleOAuthExchangeError) {
+            return errorResponse(
+              "invalid_google_drive_authorization"
+            );
+          }
+          throw error;
+        }
+      }
+
       const coreRepository = new D1CoreSnapshotRepository(env.DB);
       const inventoryRepository = new D1InventorySnapshotRepository(env.DB);
 
