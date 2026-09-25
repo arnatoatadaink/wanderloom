@@ -120,6 +120,46 @@ describe("CP-34 persistence and identity concurrency", () => {
     expect([firstPlayer, secondPlayer]).toContain(rows.results[0]?.player_id);
   });
 
+  it("converges concurrent idempotent links for the same player", async () => {
+    const api = createApi(runtime);
+    const playerId = await bootstrap(api);
+
+    const [first, second] = await Promise.all([
+      api.fetch(linkRequest(playerId), {
+        DB: env.DB as unknown as ApiDatabase,
+        GOOGLE_CLIENT_ID: "google-client-test"
+      }),
+      api.fetch(linkRequest(playerId), {
+        DB: env.DB as unknown as ApiDatabase,
+        GOOGLE_CLIENT_ID: "google-client-test"
+      })
+    ]);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+
+    const bodies = await Promise.all([first.json(), second.json()]);
+    expect(
+      bodies.map((body) =>
+        (body as {
+          accountLink: { status: string };
+        }).accountLink.status
+      ).sort()
+    ).toEqual(["already_linked", "linked"]);
+
+    const rows = await env.DB
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM external_identity_links
+         WHERE player_id = ?1
+           AND provider = 'google'`
+      )
+      .bind(playerId)
+      .first<{ count: number }>();
+
+    expect(rows?.count).toBe(1);
+  });
+
   it("serializes concurrent archive sync so the sink is called once", async () => {
     const db = env.DB as unknown as ApiDatabase;
     const playerId = "player-cp34-archive" as PlayerId;
