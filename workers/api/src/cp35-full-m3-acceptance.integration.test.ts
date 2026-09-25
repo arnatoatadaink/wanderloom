@@ -285,8 +285,8 @@ describe("CP-35 full M3 acceptance with real D1", () => {
     ).first<{ player_id: string }>();
     expect(identity?.player_id).toBe(playerId);
 
-    const tables = await db.prepare(
-      `SELECT name
+    const tableCount = await db.prepare(
+      `SELECT COUNT(*) AS count
        FROM sqlite_master
        WHERE type = 'table'
          AND name IN (
@@ -295,26 +295,15 @@ describe("CP-35 full M3 acceptance with real D1", () => {
            'recent_archive',
            'archive_export_state',
            'google_drive_authorizations'
-         )
-       ORDER BY name`
-    ).all<{ name: string }>();
-    expect((tables.results ?? []).map((row) => row.name)).toEqual([
-      "archive_export_state",
-      "external_identity_links",
-      "google_drive_authorizations",
-      "players",
-      "recent_archive"
-    ]);
+         )`
+    ).first<{ count: number }>();
+    expect(tableCount?.count).toBe(5);
 
-    const leaseColumns = await db.prepare(
-      `SELECT name
+    const leaseColumnCount = await db.prepare(
+      `SELECT COUNT(*) AS count
        FROM pragma_table_info('archive_export_state')
-       WHERE name IN ('delivery_lease_token', 'delivery_lease_until')
-       ORDER BY name`
-    ).all<{ name: string }>();
-    expect((leaseColumns.results ?? []).map((row) => row.name)).toEqual([
-      "delivery_lease_token",
-      "delivery_lease_until"
-    ]);
+       WHERE name IN ('delivery_lease_token', 'delivery_lease_until')`
+    ).first<{ count: number }>();
+    expect(leaseColumnCount?.count).toBe(2);
   });
 });
