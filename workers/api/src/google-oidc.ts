@@ -87,7 +87,8 @@ export class GoogleOidcVerificationError extends Error {
 
 export class GoogleJwksIdTokenVerifier implements GoogleIdTokenVerifier {
   constructor(
-    private readonly fetchImpl: FetchLike = fetch,
+    private readonly fetchImpl: FetchLike = (input, init) =>
+      globalThis.fetch(input, init),
     private readonly nowEpochSeconds: () => number = () =>
       Math.floor(Date.now() / 1000)
   ) {}

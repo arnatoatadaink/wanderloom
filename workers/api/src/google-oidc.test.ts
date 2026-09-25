@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   GoogleJwksIdTokenVerifier,
   GoogleOidcVerificationError
@@ -79,6 +79,32 @@ async function createFixture(options: {
 }
 
 describe("CP-31 Google JWKS ID token verifier", () => {
+  it("calls the default Worker fetch with the global receiver", async () => {
+    const fixture = await createFixture();
+    vi.stubGlobal("fetch", async function (
+      this: unknown,
+      input: RequestInfo | URL,
+      init?: RequestInit
+    ) {
+      if (this !== globalThis) {
+        throw new TypeError("Illegal invocation");
+      }
+      return fixture.fetchImpl(input, init);
+    });
+
+    try {
+      const verifier = new GoogleJwksIdTokenVerifier(
+        undefined,
+        () => 1_900_000_000
+      );
+      await expect(verifier.verify(fixture.token, "client-test")).resolves.toEqual({
+        subject: "google-subject"
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("verifies signature, issuer, audience, expiry, and returns only sub", async () => {
     const fixture = await createFixture();
     const verifier = new GoogleJwksIdTokenVerifier(

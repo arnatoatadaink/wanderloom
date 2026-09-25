@@ -36,6 +36,28 @@ Real Google link, fresh-browser restore, player continuity, idempotent relink,
 and post-restore M2 regression remain pending user browser interaction.
 CP-31 remains **In progress**.
 
+### Browser restore failure and fix — 2026-09-25
+
+A real Google restore attempt reached the Worker, but the Worker returned an
+HTML 500 response. The browser displayed `Unexpected token '<'` while trying
+to parse that response as JSON. Wrangler logged `Illegal invocation` from
+`GoogleJwksIdTokenVerifier.verify` at the Google discovery fetch call.
+
+The verifier's default fetch is now a wrapper that calls `globalThis.fetch`,
+preserving the Worker runtime's required receiver. A regression test covers
+receiver-sensitive fetch behavior.
+
+Post-fix verification:
+
+- Typecheck: PASS.
+- Tests: Web 15, game-core 56, Worker 40; total 111 PASS.
+- Web, game-core, and Worker dry-run builds: PASS.
+- Through the live Vite proxy, a deliberately invalid test ID token now
+  returns JSON HTTP 401 `invalid_google_credential`, rather than HTML 500.
+
+The user still needs to retry with a real Google account and confirm the
+link/restore and player continuity acceptance steps.
+
 Automated CP-31 implementation validation is already green:
 
 - workspace typecheck: PASS
