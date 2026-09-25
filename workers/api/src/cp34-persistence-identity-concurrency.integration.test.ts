@@ -297,4 +297,72 @@ describe("CP-34 persistence and identity concurrency", () => {
     });
   });
 
+  it("recovers an expired archive delivery lease", async () => {
+    const db = env.DB as unknown as ApiDatabase;
+    const playerId = "player-cp34-expired-lease" as PlayerId;
+    const explorationId = "exploration-cp34-expired-lease" as ExplorationId;
+    const archive = {
+      schemaVersion: 1,
+      playerId,
+      explorationId,
+      zoneId: "m1-smoke-frontier",
+      durationId: "short",
+      startedAt: "2026-09-25T15:00:00.000Z",
+      endedAt: "2026-09-25T15:05:00.000Z",
+      claimedAt: "2026-09-25T15:05:01.000Z",
+      result: "success",
+      rewards: { gold: 5, exp: 10, drops: [] },
+      summaryMetrics: {},
+      sync: { status: "pending", syncedAt: null }
+    };
+
+    await db.prepare(
+      `INSERT INTO players (player_id, created_at, updated_at)
+       VALUES (?1, ?2, ?2)`
+    ).bind(playerId, archive.startedAt).run();
+
+    await db.prepare(
+      `INSERT INTO recent_archive (
+         player_id, exploration_id, schema_version, zone_id, duration_id,
+         started_at, ended_at, claimed_at, result, sync_status, synced_at,
+         archive_json
+       ) VALUES (?1, ?2, 1, ?3, ?4, ?5, ?6, ?7, ?8, 'pending', NULL, ?9)`
+    ).bind(
+      playerId,
+      explorationId,
+      archive.zoneId,
+      archive.durationId,
+      archive.startedAt,
+      archive.endedAt,
+      archive.claimedAt,
+      archive.result,
+      JSON.stringify(archive)
+    ).run();
+
+    const repository = new D1ArchiveExportRepository(db);
+    await expect(repository.acquireDeliveryLease({
+      playerId,
+      explorationId,
+      leaseToken: "expired-owner",
+      acquiredAt: "2026-09-25T15:06:00.000Z",
+      leaseUntil: "2026-09-25T15:07:00.000Z"
+    })).resolves.toBe(true);
+
+    await expect(repository.acquireDeliveryLease({
+      playerId,
+      explorationId,
+      leaseToken: "new-owner",
+      acquiredAt: "2026-09-25T15:08:00.000Z",
+      leaseUntil: "2026-09-25T15:09:00.000Z"
+    })).resolves.toBe(true);
+
+    await expect(repository.findState(playerId, explorationId))
+      .resolves.toMatchObject({
+        attemptCount: 0,
+        remoteId: null,
+        deliveryLeaseToken: "new-owner",
+        deliveryLeaseUntil: "2026-09-25T15:09:00.000Z"
+      });
+  });
+
 });
