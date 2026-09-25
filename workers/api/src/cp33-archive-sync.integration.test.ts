@@ -169,13 +169,15 @@ describe("CP-33 archive sync with real D1", () => {
 
     await expect(
       repository.findState(playerId, explorationId)
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       attemptCount: 1,
       lastAttemptAt: "2026-09-25T01:06:00.000Z",
       lastErrorCode: "drive_create_http_503",
       lastErrorRetryable: true,
       remoteId: null,
-      syncedAt: null
+      syncedAt: null,
+      deliveryLeaseToken: null,
+      deliveryLeaseUntil: null
     });
   });
 
@@ -229,13 +231,15 @@ describe("CP-33 archive sync with real D1", () => {
 
     await expect(
       repository.findState(playerId, explorationId)
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       attemptCount: 2,
       lastAttemptAt: "2026-09-25T01:07:00.000Z",
       lastErrorCode: null,
       lastErrorRetryable: null,
       remoteId: "drive-cp33-existing",
-      syncedAt: "2026-09-25T01:07:00.000Z"
+      syncedAt: "2026-09-25T01:07:00.000Z",
+      deliveryLeaseToken: null,
+      deliveryLeaseUntil: null
     });
 
     await expect(repository.listPending(playerId, 10)).resolves.toEqual([]);

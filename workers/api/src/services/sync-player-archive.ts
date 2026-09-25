@@ -54,8 +54,37 @@ export async function syncPlayerArchive(input: {
       continue;
     }
 
+    const leaseToken = crypto.randomUUID();
+    const acquiredAt = input.now();
+    const leaseUntil = new Date(
+      new Date(acquiredAt).getTime() + 60_000
+    ).toISOString();
+    const acquired = await input.repository.acquireDeliveryLease({
+      playerId: input.playerId,
+      explorationId,
+      leaseToken,
+      acquiredAt,
+      leaseUntil
+    });
+
+    if (!acquired) {
+      continue;
+    }
+
     attempted += 1;
-    const result = await input.sink.deliver(envelope);
+
+    let result;
+    try {
+      result = await input.sink.deliver(envelope);
+    } catch (error) {
+      await input.repository.releaseDeliveryLease({
+        playerId: input.playerId,
+        explorationId,
+        leaseToken
+      });
+      throw error;
+    }
+
     const attemptedAt = input.now();
 
     if (!result.ok) {
@@ -65,7 +94,8 @@ export async function syncPlayerArchive(input: {
         explorationId,
         attemptedAt,
         retryable: result.retryable,
-        code: result.code
+        code: result.code,
+        leaseToken
       });
       continue;
     }
@@ -75,7 +105,8 @@ export async function syncPlayerArchive(input: {
       playerId: input.playerId,
       explorationId,
       syncedAt: attemptedAt,
-      remoteId: result.remoteId
+      remoteId: result.remoteId,
+      leaseToken
     });
   }
 
