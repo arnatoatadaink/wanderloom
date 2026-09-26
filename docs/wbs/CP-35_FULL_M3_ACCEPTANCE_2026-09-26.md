@@ -2,7 +2,7 @@
 
 ## Status
 
-**Ready for local validation**
+**Accepted / Complete**
 
 ## Position
 
@@ -14,18 +14,18 @@ CP-31 Google OIDC Integration                   ✅
 CP-32 Archive Export Contract                   ✅
 CP-33 appDataFolder Sync + Retry                ✅
 CP-34 Persistence / Identity Concurrency        ✅
-CP-35 Full M3 Acceptance                        🚧 In progress
+CP-35 Full M3 Acceptance                        ✅ Accepted
 ```
 
-Target milestone:
+Milestone:
 
 **M3 — Productionized Persistent Solo Slice**
 
-## Objective
+## Acceptance scope
 
-Validate M3 as one coherent release boundary rather than as isolated CPs.
+CP-35 validates M3 as one coherent release boundary rather than as isolated CPs.
 
-M3 must preserve the M2 solo gameplay loop while adding:
+M3 preserves the M2 solo gameplay loop while adding:
 
 - guest -> linked Google identity continuity
 - Google restore
@@ -37,13 +37,11 @@ M3 must preserve the M2 solo gameplay loop while adding:
 
 D1 remains gameplay-authoritative.
 
-## New full-M3 automated scenario
-
-Added:
+## Full-M3 automated scenario
 
 `workers/api/src/cp35-full-m3-acceptance.integration.test.ts`
 
-The real-D1 scenario executes:
+Real-D1 scenario:
 
 ```text
 guest bootstrap
@@ -57,23 +55,84 @@ guest bootstrap
   -> recent archive = synced
 ```
 
-It also verifies:
+The scenario verifies that one PlayerId survives identity restore, gameplay, claim and archive delivery, and that the M3 persistence schema including CP-34 delivery leases is available.
 
-- the same PlayerId survives guest -> linked -> restored identity
-- claim rewards remain valid
-- archive export identity is stable
-- delivery lease is cleared after success
-- migrations expose the M3 persistence tables
-- `archive_export_state` contains CP-34 lease columns
+## Final automated validation
 
-The test runs through the full local migration chain supplied by
-`TEST_MIGRATIONS`, currently migrations 0001 through 0005.
+Observed local result:
 
-## Existing evidence incorporated into CP-35
+```text
+Web         16 PASS
+game-core   65 PASS
+Worker      59 PASS
+----------------
+Total      140 PASS
+```
+
+Additional validation:
+
+- workspace typecheck: PASS
+- Web production build: PASS
+- game-core build: PASS
+- Worker Wrangler dry-run: PASS
+- git diff check: clean
+- only expected `workers/api/.wrangler/` local runtime state untracked
+- no OAuth secrets, refresh tokens, access tokens or encryption keys committed
+
+## Migration acceptance
+
+Local D1 migration check reports:
+
+```text
+No migrations to apply
+```
+
+Therefore the current local database is already at the complete migration baseline through:
+
+```text
+0001 ... 0005
+```
+
+CP-34 validation separately confirmed the delivery lease columns and compatibility of existing synced archive rows.
+
+## Final browser acceptance
+
+Final manual smoke passed after the CP-35 Web-state fix.
+
+Accepted observations:
+
+1. Google restore succeeds.
+2. After restore, `Start expedition` is usable without a page reload.
+3. Exploration starts normally.
+4. Claim transitions to the Result screen without a page reload.
+5. Gold / EXP / inventory remain correct.
+6. Closing the Google Drive authorization popup no longer sends the entire game to `CONNECTION / STATE ERROR`.
+7. The game screen remains usable and reports the Drive-specific failure.
+8. Retrying Drive authorization succeeds.
+9. Archive sync reports zero failures.
+10. A new exploration can be started after archive synchronization.
+
+## CP-35 defect discovered and resolved
+
+Manual acceptance exposed two Web-state UX defects:
+
+- restored state inherited `busy=true`, leaving the ready screen rendered as `Starting…`
+- Drive popup cancellation was treated as a global application failure
+
+Resolved independently in:
+
+```text
+38dbefcf0307c3a797e79f6932a953c416ed7a11
+fix(web): clear restore busy state and isolate Drive popup failures
+```
+
+The fixes were revalidated by automated tests/builds and final browser smoke.
+
+## Existing acceptance evidence retained
 
 ### M2 gameplay
 
-CP-27 full M2 acceptance remains green and covers:
+CP-27 continues to cover:
 
 - zone/duration choice
 - exploration start
@@ -81,169 +140,42 @@ CP-27 full M2 acceptance remains green and covers:
 - rarity drop
 - equipment
 - effective-stat change
-- next exploration
+- subsequent exploration
 
 ### Identity
 
-CP-31 covers:
+CP-31 covers link persistence, idempotent relink, identity/provider conflicts, restore and invalid credentials.
 
-- Google link persistence
-- idempotent relink
-- external identity conflict
-- provider conflict
-- restore without guest header
-- invalid credential rejection
-
-CP-34 additionally covers concurrent identity linking.
+CP-34 adds concurrent identity-link convergence.
 
 ### Archive
 
-CP-33 covers:
+CP-33 covers retry, authorization renewal and confirmed delivery semantics.
 
-- provider failure leaves archive pending
-- retry succeeds
-- authorization renewal reopens eligible Drive 403 failure
-- confirmed delivery moves archive to synced
-
-Real Google local acceptance already proved:
-
-- real Google OAuth authorization
-- encrypted refresh-token storage
-- real appDataFolder writes
-- repeat sync with no duplicate logical archive
-- post-sync gameplay continuity
-
-CP-35 does not require intentionally repeating destructive/error-injection
-Google consent testing unless a regression is observed.
+Real Google local acceptance established Google OAuth authorization, encrypted refresh-token storage, appDataFolder writes, repeat sync and gameplay continuity.
 
 ### Concurrency
 
-CP-34 covers:
+CP-34 covers archive delivery serialization and expired-lease recovery.
 
-- same Google subject / different players
-- same player / same Google subject
-- simultaneous archive sync serialization
-- expired lease recovery
+Earlier gameplay mutation concurrency coverage remains green.
 
-CP-18 continues to cover M2 claim/equipment mutation races.
+## Deferred design improvement
 
-## Automated validation
+Persistent Google/Drive connection-state UX is intentionally **not** reopening M3.
 
-From the CP-35 branch run:
+The future design is documented separately in:
 
-```bash
-git pull --ff-only
-pnpm -r typecheck
-pnpm -r test
-pnpm -r build
-git diff --check
-git status --short
-```
+`docs/wbs/POST_M3_GOOGLE_IDENTITY_DRIVE_PERSISTENCE_UX_PLAN_2026-09-26.md`
 
-Expected test baseline after the new CP-35 integration test:
+This includes connection-status discovery, avoiding unnecessary Drive consent popups, reauthorization classification and eventual best-effort automatic archive sync.
 
-```text
-Web         16
-game-core   65
-Worker      59
-----------------
-Total      140
-```
+It is a Post-M3 WBS/CP item and should be scheduled with other subsequent product work.
 
-The exact observed count is authoritative.
+## Final result
 
-Expected untracked local runtime state:
+All CP-35 exit criteria are satisfied.
 
-`workers/api/.wrangler/`
+**CP-35 Accepted / Complete.**
 
-No OAuth secrets, refresh tokens, access tokens, or encryption keys may appear
-in Git status/diff.
-
-## Migration validation
-
-The local D1 used for CP-33/34 already has migrations 0001 through 0005.
-
-Confirm:
-
-```bash
-pnpm --filter @wanderloom/api exec wrangler d1 migrations list wanderloom-local --local
-```
-
-All current migrations should be applied.
-
-Optional schema evidence:
-
-```bash
-pnpm --filter @wanderloom/api exec wrangler d1 execute wanderloom-local --local --command "
-SELECT name
-FROM sqlite_master
-WHERE type = 'table'
-  AND name IN (
-    'players',
-    'external_identity_links',
-    'recent_archive',
-    'archive_export_state',
-    'google_drive_authorizations'
-  )
-ORDER BY name;
-"
-```
-
-## Final browser smoke
-
-Run Worker and Web with the same local configuration already accepted in CP-33.
-
-Worker:
-
-```bash
-pnpm --filter @wanderloom/api dev
-```
-
-Web:
-
-```bash
-pnpm --filter @wanderloom/web exec vite --host 0.0.0.0
-```
-
-Use the registered origin, normally:
-
-`http://localhost:5173`
-
-Perform one short smoke sequence:
-
-1. restore the existing Google-linked player
-2. confirm normal exploration screen loads
-3. start one exploration
-4. claim it normally
-5. verify no identity/archive error blocks gameplay
-6. run **Enable Drive archive**
-7. confirm sync reports zero failures
-
-No need to expose or copy secrets during this acceptance.
-
-## CP-35 exit criteria
-
-CP-35 may be Accepted when:
-
-- full workspace typecheck passes
-- all workspace tests pass
-- CP-35 full-M3 real-D1 integration passes
-- production builds/dry-run pass
-- migration chain 0001-0005 is applied/compatible
-- CP-27 M2 gameplay acceptance remains green
-- CP-31 identity acceptance remains green
-- CP-33 archive retry acceptance remains green
-- CP-34 concurrency acceptance remains green
-- final browser restore/gameplay/archive smoke has no blocking defect
-- no sensitive OAuth/archive credential material is committed
-
-## Release boundary after acceptance
-
-After CP-35 acceptance:
-
-1. merge CP-35 to `m3`
-2. mark M3 **Productionized Persistent Solo Slice** complete
-3. prepare the M3 release baseline/tag according to the repository's release
-   convention
-4. derive the Post-M3 WBS from remaining product work rather than extending
-   the M3 critical path
+**M3 Productionized Persistent Solo Slice is ready to be merged and closed.**
