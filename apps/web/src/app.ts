@@ -87,6 +87,7 @@ export class WanderloomApp {
       this.state = {
         ...this.state,
         phase: deriveExplorationPhase(exploration, this.now()),
+        busy: false,
         zones,
         selectedZoneId: exploration?.zoneId ?? selection.zoneId,
         selectedDurationId:
@@ -247,7 +248,19 @@ export class WanderloomApp {
       this.state = { ...this.state, busy: false, errorMessage: null };
       this.render();
     } catch (error) {
-      this.fail(error);
+      const message =
+        error instanceof ApiError
+          ? `${error.code} (HTTP ${error.status})`
+          : error instanceof Error
+            ? error.message
+            : "Unknown error";
+      this.archiveStatusMessage = `Drive archive unavailable: ${message}`;
+      this.state = {
+        ...this.state,
+        busy: false,
+        errorMessage: null
+      };
+      this.render();
     }
   }
   private async startExploration(): Promise<void> {
