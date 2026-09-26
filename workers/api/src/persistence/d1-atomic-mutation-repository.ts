@@ -270,10 +270,12 @@ export class D1AtomicMutationRepository implements AtomicMutationRepository {
       .prepare(
         `DELETE FROM recent_archive
          WHERE player_id = ?1
+           AND sync_status = 'synced'
            AND exploration_id IN (
              SELECT exploration_id
              FROM recent_archive
              WHERE player_id = ?1
+               AND sync_status = 'synced'
              ORDER BY claimed_at DESC
              LIMIT -1 OFFSET ?2
            )

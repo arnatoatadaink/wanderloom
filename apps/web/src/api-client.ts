@@ -89,11 +89,12 @@ export interface ClaimResultDto {
   };
 }
 
-interface ApiErrorBody {
+export interface ApiErrorBody {
   readonly ok: false;
   readonly error: {
     readonly code: string;
-    readonly [key: string]: unknown;
+    readonly retryable: boolean;
+    readonly details?: Readonly<Record<string, unknown>>;
   };
 }
 
@@ -101,6 +102,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
+    readonly retryable: boolean,
+    readonly details: Readonly<Record<string, unknown>> | undefined,
     readonly body: unknown
   ) {
     super(`API request failed: ${status} ${code}`);
@@ -149,6 +152,97 @@ export class WanderloomApiClient {
 
     this.playerId = body.playerId;
     return body;
+  }
+
+  async linkGoogleAccount(
+    credential: string
+  ): Promise<{
+    readonly status: "linked" | "already_linked";
+    readonly provider: "google";
+    readonly subject: string;
+  }> {
+    const body = await this.request<{
+      readonly ok: true;
+      readonly accountLink: {
+        readonly status: "linked" | "already_linked";
+        readonly provider: "google";
+        readonly subject: string;
+      };
+    }>("/api/auth/google/link", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ credential })
+    });
+
+    return body.accountLink;
+  }
+
+  async restoreGoogleAccount(
+    credential: string
+  ): Promise<{
+    readonly playerId: string;
+    readonly core: CoreDto;
+    readonly inventory: InventoryDto;
+  }> {
+    const body = await this.request<{
+      readonly ok: true;
+      readonly playerId: string;
+      readonly core: CoreDto;
+      readonly inventory: InventoryDto;
+    }>("/api/auth/google/restore", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ credential })
+    }, false);
+
+    this.playerId = body.playerId;
+    return body;
+  }
+
+  async authorizeGoogleDrive(
+    code: string,
+    redirectUri: string
+  ): Promise<{ readonly authorized: true; readonly scope: string }> {
+    const body = await this.request<{
+      readonly ok: true;
+      readonly authorized: true;
+      readonly scope: string;
+    }>("/api/archive/google/authorize", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-requested-with": "XmlHttpRequest"
+      },
+      body: JSON.stringify({ code, redirectUri })
+    });
+    return {
+      authorized: body.authorized,
+      scope: body.scope
+    };
+  }
+
+  async syncArchive(): Promise<{
+    readonly attempted: number;
+    readonly synced: number;
+    readonly failed: number;
+    readonly skippedNonRetryable: number;
+  }> {
+    const body = await this.request<{
+      readonly ok: true;
+      readonly sync: {
+        readonly attempted: number;
+        readonly synced: number;
+        readonly failed: number;
+        readonly skippedNonRetryable: number;
+      };
+    }>("/api/archive/sync", {
+      method: "POST"
+    });
+    return body.sync;
   }
 
   async getZones(): Promise<readonly ZoneDto[]> {
@@ -262,6 +356,8 @@ export class WanderloomApiClient {
       throw new ApiError(
         response.status,
         errorBody.error?.code ?? "unknown_error",
+        errorBody.error?.retryable ?? false,
+        errorBody.error?.details,
         body
       );
     }

@@ -11,12 +11,14 @@ import {
   type ExplorationId,
   type ExplorationResolution,
   type ItemInstanceId,
+  type MutationError,
   type PlayerId,
   type ZoneId
 } from "@wanderloom/game-core";
 import { D1AtomicMutationRepository, type D1AtomicDatabaseLike } from "./persistence/d1-atomic-mutation-repository";
 import { D1CoreSnapshotRepository, type D1DatabaseLike } from "./persistence/d1-core-snapshot-repository";
 import { D1InventorySnapshotRepository } from "./persistence/d1-inventory-snapshot-repository";
+import { D1ExternalIdentityLinkRepository, type D1IdentityDatabaseLike } from "./persistence/d1-external-identity-link-repository";
 import { bootstrapGuestPlayer } from "./services/guest-bootstrap";
 import {
   M1_SMOKE_RECENT_ARCHIVE_RETENTION,
@@ -30,11 +32,30 @@ import {
   resolveM2SmokeRewardConfiguration
 } from "./m1-smoke-rules";
 import { persistStartedExploration } from "./services/start-exploration-persistence";
+import { linkGoogleAccount } from "./services/link-google-account";
+import { GoogleJwksIdTokenVerifier, GoogleOidcVerificationError, type GoogleIdTokenVerifier } from "./google-oidc";
+import { apiError, apiErrorStatus, type ApiErrorCode } from "./api-contract";
+import { GoogleOAuthClient, GoogleOAuthExchangeError } from "./google-oauth";
+import { GoogleDriveAppDataSink } from "./google-drive-appdata-sink";
+import { AesGcmSecretCipher } from "./secret-cipher";
+import {
+  D1ArchiveExportRepository,
+  type D1ArchiveExportDatabaseLike
+} from "./persistence/d1-archive-export-repository";
+import { D1GoogleDriveAuthorizationRepository } from "./persistence/d1-google-drive-authorization-repository";
+import { syncPlayerArchive } from "./services/sync-player-archive";
 
-export type ApiDatabase = D1DatabaseLike & D1AtomicDatabaseLike;
+export type ApiDatabase =
+  D1DatabaseLike &
+  D1AtomicDatabaseLike &
+  D1IdentityDatabaseLike &
+  D1ArchiveExportDatabaseLike;
 
 export interface ApiEnv {
   readonly DB: ApiDatabase;
+  readonly GOOGLE_CLIENT_ID?: string;
+  readonly GOOGLE_CLIENT_SECRET?: string;
+  readonly ARCHIVE_TOKEN_ENCRYPTION_KEY?: string;
 }
 
 export interface ApiRuntime {
@@ -57,6 +78,8 @@ export interface ApiRuntime {
   readonly progressionRule?: ProgressionRule;
   readonly rewardConfiguration?: ZoneRewardConfiguration;
   readonly equipmentEffectDefinitions?: readonly EquipmentEffectDefinition[];
+  readonly googleIdTokenVerifier?: GoogleIdTokenVerifier;
+  readonly googleOAuthClient?: GoogleOAuthClient;
 }
 
 const defaultRuntime: ApiRuntime = {
@@ -116,7 +139,9 @@ const defaultRuntime: ApiRuntime = {
   recentArchiveRetention: M1_SMOKE_RECENT_ARCHIVE_RETENTION,
   progressionRule: M2_SMOKE_PROGRESSION_RULE,
   rewardConfiguration: M2_SMOKE_REWARD_CONFIGURATION,
-  equipmentEffectDefinitions: M2_SMOKE_EQUIPMENT_EFFECT_DEFINITIONS
+  equipmentEffectDefinitions: M2_SMOKE_EQUIPMENT_EFFECT_DEFINITIONS,
+  googleIdTokenVerifier: new GoogleJwksIdTokenVerifier(),
+  googleOAuthClient: new GoogleOAuthClient()
 };
 
 function json(body: unknown, status = 200): Response {
@@ -128,21 +153,23 @@ function getPlayerId(request: Request): PlayerId | null {
   return value === null || value.length === 0 ? null : (value as PlayerId);
 }
 
-function notReady(feature: string): Response {
-  return json(
-    {
-      ok: false,
-      error: {
-        code: "not_ready",
-        feature
-      }
-    },
-    501
-  );
+function errorResponse(
+  code: ApiErrorCode,
+  details?: Readonly<Record<string, unknown>>
+): Response {
+  return json(apiError(code, details), apiErrorStatus(code));
 }
 
-function mutationErrorStatus(code: string): number {
-  return code === "version_conflict" || code === "already_claimed" ? 409 : 400;
+function notReady(feature: string): Response {
+  return errorResponse("not_ready", { feature });
+}
+
+function mutationErrorResponse(error: MutationError): Response {
+  const { code, ...details } = error;
+  return errorResponse(
+    code,
+    details as Readonly<Record<string, unknown>>
+  );
 }
 
 export function createApi(runtime: ApiRuntime = defaultRuntime) {
@@ -172,17 +199,322 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
         );
       }
 
+      if (method === "POST" && url.pathname === "/api/auth/google/restore") {
+        if (!env.GOOGLE_CLIENT_ID || !runtime.googleIdTokenVerifier) {
+          return notReady("google_oidc");
+        }
+
+        const body = (await request.json()) as {
+          readonly credential?: string;
+        };
+        if (!body.credential) {
+          return errorResponse("invalid_request");
+        }
+
+        try {
+          const verified = await runtime.googleIdTokenVerifier.verify(
+            body.credential,
+            env.GOOGLE_CLIENT_ID
+          );
+          const identityRepository =
+            new D1ExternalIdentityLinkRepository(env.DB);
+          const link = await identityRepository.findByIdentity({
+            provider: "google",
+            subject: verified.subject
+          });
+          if (link === null) {
+            return errorResponse("linked_account_not_found", {
+              provider: "google"
+            });
+          }
+
+          const coreRepository = new D1CoreSnapshotRepository(env.DB);
+          const inventoryRepository =
+            new D1InventorySnapshotRepository(env.DB);
+          const [core, inventory] = await Promise.all([
+            coreRepository.findByPlayerId(link.playerId),
+            inventoryRepository.findByPlayerId(link.playerId)
+          ]);
+          if (core === null || inventory === null) {
+            return errorResponse("player_not_found");
+          }
+
+          return json({
+            ok: true,
+            playerId: link.playerId,
+            core,
+            inventory
+          });
+        } catch (error) {
+          if (error instanceof GoogleOidcVerificationError) {
+            return errorResponse("invalid_google_credential");
+          }
+          throw error;
+        }
+      }
+
       const playerId = getPlayerId(request);
       if (playerId === null) {
-        return json(
-          {
-            ok: false,
-            error: {
-              code: "missing_player_id"
-            }
-          },
-          401
+        return errorResponse("missing_player_id");
+      }
+
+      if (method === "POST" && url.pathname === "/api/auth/google/link") {
+        if (!env.GOOGLE_CLIENT_ID || !runtime.googleIdTokenVerifier) {
+          return notReady("google_oidc");
+        }
+
+        const body = (await request.json()) as {
+          readonly credential?: string;
+        };
+        if (!body.credential) {
+          return errorResponse("invalid_request");
+        }
+
+        const repository = new D1ExternalIdentityLinkRepository(env.DB);
+        try {
+          const result = await linkGoogleAccount({
+            playerId,
+            credential: body.credential,
+            clientId: env.GOOGLE_CLIENT_ID,
+            linkedAt: runtime.now(),
+            verifier: runtime.googleIdTokenVerifier,
+            repository
+          });
+
+          if ("code" in result) {
+            return errorResponse(result.code, result.details);
+          }
+
+          return json({
+            ok: true,
+            accountLink: result
+          });
+        } catch (error) {
+          if (error instanceof GoogleOidcVerificationError) {
+            return errorResponse("invalid_google_credential");
+          }
+          throw error;
+        }
+      }
+
+      if (
+        method === "POST" &&
+        url.pathname === "/api/archive/google/authorize"
+      ) {
+        if (
+          !env.GOOGLE_CLIENT_ID ||
+          !env.GOOGLE_CLIENT_SECRET ||
+          !env.ARCHIVE_TOKEN_ENCRYPTION_KEY ||
+          !runtime.googleIdTokenVerifier ||
+          !runtime.googleOAuthClient
+        ) {
+          return notReady("google_drive_oauth");
+        }
+
+        if (
+          request.headers.get("x-requested-with") !== "XmlHttpRequest"
+        ) {
+          return errorResponse("invalid_request", {
+            reason: "missing_requested_with"
+          });
+        }
+
+        const body = (await request.json()) as {
+          readonly code?: string;
+          readonly redirectUri?: string;
+        };
+        if (!body.code || !body.redirectUri) {
+          return errorResponse("invalid_request");
+        }
+
+        let redirectOrigin: string;
+        try {
+          const redirectUrl = new URL(body.redirectUri);
+          redirectOrigin = redirectUrl.origin;
+          if (redirectOrigin !== body.redirectUri) {
+            return errorResponse("invalid_request", {
+              reason: "redirect_uri_must_be_origin"
+            });
+          }
+        } catch {
+          return errorResponse("invalid_request", {
+            reason: "invalid_redirect_uri"
+          });
+        }
+
+        const requestOrigin = request.headers.get("origin");
+        if (requestOrigin !== null && requestOrigin !== redirectOrigin) {
+          return errorResponse("invalid_request", {
+            reason: "origin_mismatch"
+          });
+        }
+
+        const identityRepository =
+          new D1ExternalIdentityLinkRepository(env.DB);
+        const links = await identityRepository.listByPlayerId(playerId);
+        const googleLink = links.find(
+          (link) => link.identity.provider === "google"
         );
+        if (!googleLink) {
+          return errorResponse("linked_account_not_found", {
+            provider: "google"
+          });
+        }
+
+        try {
+          const tokens = await runtime.googleOAuthClient.exchangeCode({
+            code: body.code,
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+            redirectUri: redirectOrigin
+          });
+
+          if (!tokens.idToken) {
+            return errorResponse("invalid_google_drive_authorization", {
+              reason: "missing_id_token"
+            });
+          }
+
+          const verified = await runtime.googleIdTokenVerifier.verify(
+            tokens.idToken,
+            env.GOOGLE_CLIENT_ID
+          );
+          if (verified.subject !== googleLink.identity.subject) {
+            return errorResponse("google_drive_identity_conflict", {
+              provider: "google"
+            });
+          }
+
+          const requiredScope =
+            "https://www.googleapis.com/auth/drive.appdata";
+          const scopes = new Set(
+            tokens.scope.split(/\s+/).filter((scope) => scope.length > 0)
+          );
+          if (!scopes.has(requiredScope)) {
+            return errorResponse("invalid_google_drive_authorization", {
+              reason: "drive_appdata_scope_missing"
+            });
+          }
+
+          const authorizationRepository =
+            new D1GoogleDriveAuthorizationRepository(env.DB);
+          const existing =
+            await authorizationRepository.findByPlayerId(playerId);
+
+          let encryptedRefreshToken:
+            | { readonly ciphertext: string; readonly iv: string }
+            | null = null;
+
+          if (tokens.refreshToken !== null) {
+            const cipher = new AesGcmSecretCipher(
+              env.ARCHIVE_TOKEN_ENCRYPTION_KEY
+            );
+            encryptedRefreshToken =
+              await cipher.encrypt(tokens.refreshToken);
+          } else if (existing !== null) {
+            encryptedRefreshToken = {
+              ciphertext: existing.refreshTokenCiphertext,
+              iv: existing.refreshTokenIv
+            };
+          }
+
+          if (encryptedRefreshToken === null) {
+            return errorResponse(
+              "google_drive_offline_access_required"
+            );
+          }
+
+          await authorizationRepository.upsert({
+            playerId,
+            refreshTokenCiphertext:
+              encryptedRefreshToken.ciphertext,
+            refreshTokenIv: encryptedRefreshToken.iv,
+            grantedScope: tokens.scope,
+            authorizedAt: runtime.now()
+          });
+
+          await new D1ArchiveExportRepository(env.DB)
+            .retryAfterAuthorization(playerId);
+
+          return json({
+            ok: true,
+            authorized: true,
+            scope: tokens.scope
+          });
+        } catch (error) {
+          if (
+            error instanceof GoogleOAuthExchangeError ||
+            error instanceof GoogleOidcVerificationError
+          ) {
+            return errorResponse(
+              "invalid_google_drive_authorization"
+            );
+          }
+          throw error;
+        }
+      }
+
+      if (
+        method === "POST" &&
+        url.pathname === "/api/archive/sync"
+      ) {
+        if (
+          !env.GOOGLE_CLIENT_ID ||
+          !env.GOOGLE_CLIENT_SECRET ||
+          !env.ARCHIVE_TOKEN_ENCRYPTION_KEY ||
+          !runtime.googleOAuthClient
+        ) {
+          return notReady("google_drive_sync");
+        }
+
+        const authorizationRepository =
+          new D1GoogleDriveAuthorizationRepository(env.DB);
+        const authorization =
+          await authorizationRepository.findByPlayerId(playerId);
+        if (authorization === null) {
+          return errorResponse("google_drive_not_authorized");
+        }
+
+        try {
+          const cipher = new AesGcmSecretCipher(
+            env.ARCHIVE_TOKEN_ENCRYPTION_KEY
+          );
+          const refreshToken = await cipher.decrypt({
+            ciphertext: authorization.refreshTokenCiphertext,
+            iv: authorization.refreshTokenIv
+          });
+          const tokens =
+            await runtime.googleOAuthClient.refreshAccessToken({
+              refreshToken,
+              clientId: env.GOOGLE_CLIENT_ID,
+              clientSecret: env.GOOGLE_CLIENT_SECRET
+            });
+
+          const repository =
+            new D1ArchiveExportRepository(env.DB);
+          const sink = new GoogleDriveAppDataSink({
+            accessToken: tokens.accessToken
+          });
+          const summary = await syncPlayerArchive({
+            playerId,
+            repository,
+            sink,
+            now: runtime.now,
+            limit: 10
+          });
+
+          return json({
+            ok: true,
+            sync: summary
+          });
+        } catch (error) {
+          if (error instanceof GoogleOAuthExchangeError) {
+            return errorResponse(
+              "invalid_google_drive_authorization"
+            );
+          }
+          throw error;
+        }
       }
 
       const coreRepository = new D1CoreSnapshotRepository(env.DB);
@@ -191,21 +523,21 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
       if (method === "GET" && url.pathname === "/api/state") {
         const core = await coreRepository.findByPlayerId(playerId);
         return core === null
-          ? json({ ok: false, error: { code: "player_not_found" } }, 404)
+          ? errorResponse("player_not_found")
           : json({ ok: true, core });
       }
 
       if (method === "GET" && url.pathname === "/api/inventory") {
         const inventory = await inventoryRepository.findByPlayerId(playerId);
         return inventory === null
-          ? json({ ok: false, error: { code: "player_not_found" } }, 404)
+          ? errorResponse("player_not_found")
           : json({ ok: true, inventory });
       }
 
       if (method === "GET" && url.pathname === "/api/explorations/current") {
         const core = await coreRepository.findByPlayerId(playerId);
         return core === null
-          ? json({ ok: false, error: { code: "player_not_found" } }, 404)
+          ? errorResponse("player_not_found")
           : json({ ok: true, exploration: core.activeExploration });
       }
 
@@ -219,7 +551,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
       if (method === "POST" && url.pathname === "/api/explorations") {
         const core = await coreRepository.findByPlayerId(playerId);
         if (core === null) {
-          return json({ ok: false, error: { code: "player_not_found" } }, 404);
+          return errorResponse("player_not_found");
         }
 
         const body = (await request.json()) as {
@@ -227,7 +559,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           readonly durationId?: string;
         };
         if (!body.zoneId || !body.durationId) {
-          return json({ ok: false, error: { code: "invalid_request" } }, 400);
+          return errorResponse("invalid_request");
         }
 
         const zoneId = body.zoneId as ZoneId;
@@ -262,10 +594,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
 
         return result.ok
           ? json({ ok: true, core: result.value }, 201)
-          : json(
-              { ok: false, error: result.error },
-              mutationErrorStatus(result.error.code)
-            );
+          : mutationErrorResponse(result.error);
       }
 
       const claimMatch = url.pathname.match(
@@ -279,7 +608,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
         ]);
 
         if (core === null || inventory === null) {
-          return json({ ok: false, error: { code: "player_not_found" } }, 404);
+          return errorResponse("player_not_found");
         }
 
         const exploration = core.activeExploration;
@@ -299,31 +628,18 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
             .first<{ claimed_at: string }>();
 
           if (claimed !== null) {
-            return json(
-              {
-                ok: false,
-                error: {
-                  code: "already_claimed",
-                  explorationId: requestedExplorationId,
-                  claimedAt: claimed.claimed_at
-                }
-              },
-              409
-            );
+            return errorResponse("already_claimed", {
+              explorationId: requestedExplorationId,
+              claimedAt: claimed.claimed_at
+            });
           }
 
-          return json(
-            {
-              ok: false,
-              error: {
-                code: "invalid_exploration_state",
-                explorationId: requestedExplorationId,
-                actualState: exploration === null ? "idle" : "different_exploration",
-                allowedStates: ["ready_to_claim"]
-              }
-            },
-            400
-          );
+          return errorResponse("invalid_exploration_state", {
+            explorationId: requestedExplorationId,
+            actualState:
+              exploration === null ? "idle" : "different_exploration",
+            allowedStates: ["ready_to_claim"]
+          });
         }
 
         const claimedAt = runtime.now();
@@ -347,10 +663,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
             : {})
         });
         if (!calculated.ok) {
-          return json(
-            { ok: false, error: calculated.error },
-            mutationErrorStatus(calculated.error.code)
-          );
+          return mutationErrorResponse(calculated.error);
         }
 
         if (runtime.recentArchiveRetention === null) {
@@ -380,16 +693,13 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
               inventory: calculated.value.nextInventory,
               archiveEntry: calculated.value.archiveEntry
             })
-          : json(
-              { ok: false, error: committed.error },
-              mutationErrorStatus(committed.error.code)
-            );
+          : mutationErrorResponse(committed.error);
       }
 
       if (method === "POST" && url.pathname === "/api/equipment") {
         const inventory = await inventoryRepository.findByPlayerId(playerId);
         if (inventory === null) {
-          return json({ ok: false, error: { code: "player_not_found" } }, 404);
+          return errorResponse("player_not_found");
         }
 
         const body = (await request.json()) as {
@@ -402,7 +712,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           !body.itemInstanceId ||
           !Number.isInteger(body.expectedInventoryStateVersion)
         ) {
-          return json({ ok: false, error: { code: "invalid_request" } }, 400);
+          return errorResponse("invalid_request");
         }
 
         const itemInstanceId = body.itemInstanceId as ItemInstanceId;
@@ -411,15 +721,11 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
         }
 
         if (inventory.stateVersion !== body.expectedInventoryStateVersion) {
-          return json({
-            ok: false,
-            error: {
-              code: "version_conflict",
-              snapshot: "inventory",
-              expectedVersion: body.expectedInventoryStateVersion,
-              actualVersion: inventory.stateVersion
-            }
-          }, 409);
+          return errorResponse("version_conflict", {
+            snapshot: "inventory",
+            expectedVersion: body.expectedInventoryStateVersion,
+            actualVersion: inventory.stateVersion
+          });
         }
 
         const equipped = equipItem({
@@ -429,7 +735,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           equippedAt: runtime.now()
         });
         if (!equipped.ok) {
-          return json({ ok: false, error: equipped.error }, 400);
+          return mutationErrorResponse(equipped.error);
         }
 
         const atomicRepository = new D1AtomicMutationRepository(env.DB, {
@@ -449,21 +755,10 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
               inventory: equipped.value.nextInventory,
               idempotent: false
             })
-          : json(
-              { ok: false, error: committed.error },
-              mutationErrorStatus(committed.error.code)
-            );
+          : mutationErrorResponse(committed.error);
       }
 
-      return json(
-        {
-          ok: false,
-          error: {
-            code: "not_found"
-          }
-        },
-        404
-      );
+      return errorResponse("not_found");
     }
   };
 }

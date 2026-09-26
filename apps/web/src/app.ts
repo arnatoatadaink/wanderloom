@@ -4,6 +4,7 @@ import {
   type ClaimResultDto,
   type ZoneDto
 } from "./api-client";
+import type { GoogleIdentityBridge } from "./google-identity";
 import {
   chooseInitialSelection,
   deriveExplorationPhase,
@@ -22,12 +23,23 @@ export class WanderloomApp {
   private timer: number | null = null;
   private tutorialTimer: number | null = null;
   private tutorialEndsAtMs: number | null = null;
+  private offerGoogleRestore = false;
+  private accountStatusMessage: string | null = null;
+  private googleAccountReady = false;
+  private archiveStatusMessage: string | null = null;
 
   constructor(
     private readonly root: HTMLElement,
     private readonly api: WanderloomApiClient,
     private readonly storage: Storage = localStorage,
-    private readonly now: () => number = Date.now
+    private readonly now: () => number = Date.now,
+    private readonly googleIdentity: GoogleIdentityBridge = {
+      enabled: false,
+      async render() {},
+      async requestDriveAuthorization() {
+        throw new Error("Google Identity Services is not configured");
+      }
+    }
   ) {}
 
   async start(): Promise<void> {
@@ -41,16 +53,29 @@ export class WanderloomApp {
     await this.loadRemoteState();
   }
 
-  private async loadRemoteState(): Promise<void> {
+  private async loadRemoteState(forceGuest = false): Promise<void> {
     try {
       const storedPlayerId = this.storage.getItem(PLAYER_STORAGE_KEY);
       if (storedPlayerId === null) {
+        if (this.googleIdentity.enabled && !forceGuest) {
+          this.offerGoogleRestore = true;
+          this.state = {
+            ...this.state,
+            phase: "booting",
+            busy: false,
+            errorMessage: null
+          };
+          this.render();
+          return;
+        }
+
         const guest = await this.api.bootstrapGuest();
         this.storage.setItem(PLAYER_STORAGE_KEY, guest.playerId);
       } else {
         this.api.setPlayerId(storedPlayerId);
       }
 
+      this.offerGoogleRestore = false;
       const [zones, core, inventory, exploration] = await Promise.all([
         this.api.getZones(),
         this.api.getState(),
@@ -62,6 +87,7 @@ export class WanderloomApp {
       this.state = {
         ...this.state,
         phase: deriveExplorationPhase(exploration, this.now()),
+        busy: false,
         zones,
         selectedZoneId: exploration?.zoneId ?? selection.zoneId,
         selectedDurationId:
@@ -171,6 +197,72 @@ export class WanderloomApp {
     }, 1000);
   }
 
+  private async continueAsGuest(): Promise<void> {
+    this.offerGoogleRestore = false;
+    this.state = { ...this.state, busy: true, errorMessage: null };
+    this.render();
+    await this.loadRemoteState(true);
+  }
+
+  private async handleGoogleCredential(
+    mode: "link" | "restore",
+    credential: string
+  ): Promise<void> {
+    this.state = { ...this.state, busy: true, errorMessage: null };
+    this.render();
+
+    try {
+      if (mode === "restore") {
+        const restored = await this.api.restoreGoogleAccount(credential);
+        this.storage.setItem(PLAYER_STORAGE_KEY, restored.playerId);
+        this.offerGoogleRestore = false;
+        this.accountStatusMessage = "Google account restored.";
+        this.googleAccountReady = true;
+        await this.loadRemoteState(false);
+        return;
+      }
+
+      const linked = await this.api.linkGoogleAccount(credential);
+      this.accountStatusMessage =
+        linked.status === "already_linked"
+          ? "Google account already linked."
+          : "Google account linked.";
+      this.googleAccountReady = true;
+      this.state = { ...this.state, busy: false, errorMessage: null };
+      this.render();
+    } catch (error) {
+      this.fail(error);
+    }
+  }
+
+  private async authorizeAndSyncArchive(): Promise<void> {
+    this.state = { ...this.state, busy: true, errorMessage: null };
+    this.archiveStatusMessage = "Requesting Google Drive permission…";
+    this.render();
+
+    try {
+      const code = await this.googleIdentity.requestDriveAuthorization();
+      await this.api.authorizeGoogleDrive(code, window.location.origin);
+      const sync = await this.api.syncArchive();
+      this.archiveStatusMessage = `Archive sync complete: ${sync.synced} synced, ${sync.failed} failed.`;
+      this.state = { ...this.state, busy: false, errorMessage: null };
+      this.render();
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? `${error.code} (HTTP ${error.status})`
+          : error instanceof Error
+            ? error.message
+            : "Unknown error";
+      this.archiveStatusMessage = `Drive archive unavailable: ${message}`;
+      this.state = {
+        ...this.state,
+        busy: false,
+        errorMessage: null
+      };
+      this.render();
+    }
+  }
   private async startExploration(): Promise<void> {
     const zoneId = this.state.selectedZoneId;
     const durationId = this.state.selectedDurationId;
@@ -326,9 +418,27 @@ export class WanderloomApp {
     `;
 
     this.bindEvents();
+    void this.mountGoogleIdentity();
   }
 
   private renderBooting(): string {
+    if (this.offerGoogleRestore) {
+      return `
+        <div class="center-state account-entry">
+          <p class="eyebrow">RETURNING PLAYER</p>
+          <h2>Restore your linked account</h2>
+          <p class="hint">
+            Sign in with Google to restore an existing Wanderloom player,
+            or continue as a new guest.
+          </p>
+          <div id="google-restore-button" class="google-identity-host"></div>
+          <button id="continue-as-guest" class="secondary-action" type="button">
+            Continue as guest
+          </button>
+        </div>
+      `;
+    }
+
     return `
       <div class="center-state">
         <div class="spinner" aria-hidden="true"></div>
@@ -422,6 +532,21 @@ export class WanderloomApp {
       </div>
 
       ${this.renderInventory()}
+
+      ${this.googleIdentity.enabled ? `
+        <div class="account-panel">
+          <span class="field-label">Account</span>
+          <p class="hint">Link this guest progress to Google for restore on another browser.</p>
+          ${this.accountStatusMessage ? `<p class="account-status">${escapeHtml(this.accountStatusMessage)}</p>` : ""}
+          <div id="google-link-button" class="google-identity-host"></div>
+          ${this.googleAccountReady ? `
+            <button id="authorize-drive-archive" class="secondary-action" type="button" ${this.state.busy ? "disabled" : ""}>
+              Enable Drive archive
+            </button>
+            ${this.archiveStatusMessage ? `<p class="account-status">${escapeHtml(this.archiveStatusMessage)}</p>` : ""}
+          ` : ""}
+        </div>
+      ` : ""}
 
       <button
         id="start-expedition"
@@ -643,6 +768,43 @@ export class WanderloomApp {
     this.root
       .querySelector("#skip-tutorial")
       ?.addEventListener("click", () => this.completeLocalTutorial());
+
+    this.root
+      .querySelector("#continue-as-guest")
+      ?.addEventListener("click", () => void this.continueAsGuest());
+    this.root
+      .querySelector("#authorize-drive-archive")
+      ?.addEventListener(
+        "click",
+        () => void this.authorizeAndSyncArchive()
+      );
+  }
+
+  private async mountGoogleIdentity(): Promise<void> {
+    if (!this.googleIdentity.enabled || this.state.busy) {
+      return;
+    }
+
+    const restoreHost =
+      this.root.querySelector<HTMLElement>("#google-restore-button");
+    if (restoreHost) {
+      await this.googleIdentity.render(
+        restoreHost,
+        "restore",
+        (credential) => void this.handleGoogleCredential("restore", credential)
+      );
+      return;
+    }
+
+    const linkHost =
+      this.root.querySelector<HTMLElement>("#google-link-button");
+    if (linkHost) {
+      await this.googleIdentity.render(
+        linkHost,
+        "link",
+        (credential) => void this.handleGoogleCredential("link", credential)
+      );
+    }
   }
 
   private selectedZone(): ZoneDto | undefined {

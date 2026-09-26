@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { WanderloomApiClient } from "./api-client";
+import { ApiError, WanderloomApiClient } from "./api-client";
 
 describe("CP-11/17 API client", () => {
   it("invokes the default browser fetch with its global receiver", async () => {
@@ -166,5 +166,150 @@ describe("CP-11/17 API client", () => {
     await client.getZones();
 
     expect(observedHeader).toBe("player-1");
+  });
+  it("links and restores Google identity through the API client", async () => {
+    const observed: string[] = [];
+    const client = new WanderloomApiClient(async (input) => {
+      const path = String(input);
+      observed.push(path);
+
+      if (path === "/api/auth/google/link") {
+        return Response.json({
+          ok: true,
+          accountLink: {
+            status: "linked",
+            provider: "google",
+            subject: "google-sub-1"
+          }
+        });
+      }
+
+      if (path === "/api/auth/google/restore") {
+        return Response.json({
+          ok: true,
+          playerId: "player-restored",
+          core: {
+            stateVersion: 3,
+            progression: { level: 2, exp: 5, gold: 9 },
+            activeExploration: null
+          },
+          inventory: {
+            stateVersion: 2,
+            equipment: { slots: {} },
+            items: []
+          }
+        });
+      }
+
+      return new Response(null, { status: 404 });
+    }, "player-guest");
+
+    await expect(
+      client.linkGoogleAccount("credential")
+    ).resolves.toMatchObject({
+      status: "linked",
+      provider: "google",
+      subject: "google-sub-1"
+    });
+
+    await expect(
+      client.restoreGoogleAccount("credential")
+    ).resolves.toMatchObject({
+      playerId: "player-restored"
+    });
+
+    expect(client.getPlayerId()).toBe("player-restored");
+    expect(observed).toEqual([
+      "/api/auth/google/link",
+      "/api/auth/google/restore"
+    ]);
+  });
+
+  it("authorizes Drive and requests archive sync with player identity", async () => {
+    const observed: Array<{
+      path: string;
+      headers: Headers;
+      body: unknown;
+    }> = [];
+    const client = new WanderloomApiClient(async (input, init) => {
+      const headers = new Headers(init?.headers);
+      const body = init?.body ? JSON.parse(String(init.body)) : null;
+      observed.push({ path: String(input), headers, body });
+
+      if (String(input) === "/api/archive/google/authorize") {
+        return Response.json({
+          ok: true,
+          authorized: true,
+          scope: "openid https://www.googleapis.com/auth/drive.appdata"
+        });
+      }
+
+      return Response.json({
+        ok: true,
+        sync: {
+          attempted: 1,
+          synced: 1,
+          failed: 0,
+          skippedNonRetryable: 0
+        }
+      });
+    }, "player-1");
+
+    await expect(
+      client.authorizeGoogleDrive("code-1", "http://localhost:5173")
+    ).resolves.toMatchObject({
+      authorized: true
+    });
+    await expect(client.syncArchive()).resolves.toEqual({
+      attempted: 1,
+      synced: 1,
+      failed: 0,
+      skippedNonRetryable: 0
+    });
+
+    expect(observed[0]?.headers.get("x-requested-with")).toBe(
+      "XmlHttpRequest"
+    );
+    expect(observed[0]?.headers.get("x-wanderloom-player-id")).toBe(
+      "player-1"
+    );
+    expect(observed[0]?.body).toEqual({
+      code: "code-1",
+      redirectUri: "http://localhost:5173"
+    });
+    expect(observed[1]?.headers.get("x-wanderloom-player-id")).toBe(
+      "player-1"
+    );
+  });
+
+  it("preserves API retryability and details on errors", async () => {
+    const client = new WanderloomApiClient(async () =>
+      Response.json(
+        {
+          ok: false,
+          error: {
+            code: "version_conflict",
+            retryable: true,
+            details: {
+              snapshot: "inventory",
+              expectedVersion: 1,
+              actualVersion: 2
+            }
+          }
+        },
+        { status: 409 }
+      )
+    , "player-1");
+
+    await expect(client.getInventory()).rejects.toMatchObject({
+      status: 409,
+      code: "version_conflict",
+      retryable: true,
+      details: {
+        snapshot: "inventory",
+        expectedVersion: 1,
+        actualVersion: 2
+      }
+    } satisfies Partial<ApiError>);
   });
 });

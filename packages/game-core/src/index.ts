@@ -1,5 +1,6 @@
 export * from "./domain/equipment";
 export * from "./domain/archive";
+export * from "./domain/archive-export";
 export * from "./domain/claim-calculation";
 export * from "./domain/core-snapshot";
 export * from "./domain/exploration-state";
@@ -26,3 +27,7 @@ export * from "./domain/rarity-zone-rewards";
 export * from "./domain/equipment-effects";
 
 export * from "./domain/balance-simulator";
+
+export * from "./domain/balance-scenarios";
+
+export * from "./domain/account-linking";

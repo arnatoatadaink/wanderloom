@@ -12,6 +12,10 @@ class FakeStatement {
     return null;
   }
 
+  async all<T>(): Promise<{ results: T[] }> {
+    return { results: [] };
+  }
+
   async run(): Promise<{ meta: { changes: number } }> {
     return { meta: { changes: 1 } };
   }
@@ -92,7 +96,8 @@ describe("CP-10 API wiring", () => {
     await expect(response.json()).resolves.toEqual({
       ok: false,
       error: {
-        code: "missing_player_id"
+        code: "missing_player_id",
+        retryable: false
       }
     });
   });
