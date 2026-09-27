@@ -11,7 +11,7 @@
 - M4 integration branch: `m4`
 - CP-42 merge commit on `m4`: `865590ab91fb7baa88e7b4c41b8b6060e301cb93`
 - Release tag: pending
-- Main release PR: pending
+- Main release PR: https://github.com/arnatoatadaink/wanderloom/pull/31
 
 ## Acceptance basis
 
@@ -24,6 +24,20 @@
 - Workspace build: PASS
 - Wrangler 4.132.0 deploy --dry-run: PASS
 - D1 migrations `0001` through `0006`: verified
+- Local D1 migration `0006`: applied successfully
+- Normal-path browser verification: PASS (user-reported)
+- API-mocked Chromium failure-path verification: PASS — 6 Playwright tests
+- Browser test typecheck and existing web tests/build: PASS
+
+Browser evidence records:
+
+- `docs/wbs/M4_LOCAL_BROWSER_ACCEPTANCE_2026-09-27.md`
+- `docs/wbs/M4_BROWSER_FAILURE_RUNBOOK_2026-09-27.md`
+
+Failure-path browser evidence uses the real Web app with mocked Worker API and
+Google SDK responses. Live Google popup/credential revocation tests remain
+unverified and are a recorded limitation. Backend classification/persistence is
+covered separately by the CP-39 regression suite.
 
 Primary acceptance record:
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Local automated acceptance PASS / Local migration PASS / Normal-path browser checks PASS / Failure-path browser checks not yet verified**
+**Local automated acceptance PASS / Local migration PASS / Normal-path browser checks PASS / API-mocked Chromium failure-path checks PASS / Live Google failure paths not yet verified**
 
 User-reported local verification. Repository baseline at receipt: `m4`,
 `379893fd74f5f2de331f58ff73c595814fcd85ed`.
@@ -86,6 +86,31 @@ Before final release acceptance, verify the resulting main commit using
 `V0_0_4_MAIN_LOCAL_ACCEPTANCE_CHECKLIST_2026-09-27.md` and record remaining
 browser scenarios as PASS, FAIL or explicitly unverified. This record does not
 declare full browser acceptance or readiness to tag v0.0.4.
+
+## Automated Chromium failure-path evidence
+
+On 2026-09-27, GPT-6 Sol implemented and ran Playwright 1.63.0 against the real
+Web application in Chromium. All 6 browser tests passed:
+
+- Pending and failed Drive sync: reward result remains visible, equipment can be
+  changed while sync is pending, next exploration starts after failure, and
+  claimed rewards survive reload through the stateful mocked API.
+- Network abort, HTTP 429 and HTTP 503: explicit retry succeeds without OAuth
+  consent or incorrectly presenting reconnect-required state (3 tests).
+- Persisted reconnect-required status: reload and reward claim do not open OAuth;
+  explicit reconnect completes and changes the display to Connected.
+- Google SDK popup-closed callback: cancellation stays local, gameplay proceeds,
+  and explicit reconnect retry succeeds.
+
+These tests mock the Worker API and Google Identity Services SDK boundary. They
+verify the actual browser UI and client behavior, not real Google popups, Google
+credential revocation, or D1 persistence. The original manual results remain
+unchanged above. Backend invalid_grant/transient-error classification is covered
+separately by existing CP-39 tests. Live Google failure-path checks remain
+unverified; this evidence does not create a release tag or authorize a release.
+
+Reproduction and report instructions:
+`M4_BROWSER_FAILURE_RUNBOOK_2026-09-27.md`.
 
 ## Future design feedback: automatic Drive synchronization
 

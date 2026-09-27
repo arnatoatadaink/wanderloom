@@ -8,3 +8,7 @@ trash/
 # Local Google OIDC configuration; never commit environment-specific values.
 apps/web/.env.local
 workers/api/.dev.vars
+
+# Generated Playwright screenshots, traces and HTML reports.
+apps/web/test-results/
+apps/web/playwright-report/
