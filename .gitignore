@@ -9,6 +9,9 @@ trash/
 apps/web/.env.local
 workers/api/.dev.vars
 
+# Account-specific/generated Wrangler deployment material; never commit D1 IDs.
+workers/api/.wrangler/
+
 # Generated Playwright screenshots, traces and HTML reports.
 apps/web/test-results/
 apps/web/playwright-report/
