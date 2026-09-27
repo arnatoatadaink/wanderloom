@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress — guarded remote migration workflow implemented**
+**Accepted / Complete**
 
 ## Objective
 
@@ -72,7 +72,7 @@ pnpm --filter @wanderloom/api migrate:remote -- \
 
 ## Cloudflare behavior relied upon
 
-Current Wrangler supports `d1 migrations list` and `d1 migrations apply` with `--remote`, `--config`, and `--env`. Cloudflare documents that database names are preferable to binding names when avoiding accidental migration of the wrong binding. Wrangler also records applied migrations in `d1_migrations` and captures a backup when applying migrations.
+Wrangler supports `d1 migrations list` and `d1 migrations apply` with `--remote`, `--config`, and `--env`. Database names are used instead of the generic `DB` binding name to reduce target ambiguity. Wrangler records applied migrations in `d1_migrations`.
 
 ## Tests
 
@@ -84,16 +84,24 @@ Current Wrangler supports `d1 migrations list` and `d1 migrations apply` with `-
 - wrong-environment confirmation is rejected,
 - exact environment-specific confirmation is accepted.
 
-## Acceptance evidence required
+## Acceptance evidence
 
-Before CP-44 can be Accepted:
+Local acceptance on 2026-09-27:
 
-1. API typecheck PASS,
-2. all API tests PASS,
-3. Wrangler local dry-run PASS,
-4. generated remote config remains ignored by Git,
-5. safe staging preview command reaches Wrangler with the expected staging target,
-6. an apply attempt without the exact confirmation fails before Wrangler executes,
-7. no real production migration is required for CP-44 acceptance.
+- API typecheck: PASS
+- API tests: **27 files / 85 tests PASS**
+- Wrangler 4.132.0 local deploy dry-run: PASS
+- local binding remains `env.DB (wanderloom-local)`
+- generated remote Wrangler configuration remains outside Git
+- migration command construction for staging/production is covered by regression tests
+- staging `--apply` without exact confirmation failed closed before Wrangler execution with:
+  `refusing remote migration apply; pass --confirm "APPLY wanderloom-staging"`
+- no production migration was executed
 
-Remote D1 provisioning itself belongs to CP-45. Actual production migration is an operational release action after the M5 runbook is complete.
+A live remote `migrations list` is intentionally deferred until CP-45 provisions real staging/production D1 identifiers. CP-44 accepts the safety contract and fail-closed execution boundary; it does not require remote resource creation.
+
+## Result
+
+CP-44 is **Accepted / Complete**.
+
+The next critical-path item is **CP-45 — Secret / Configuration Provisioning**, which owns real remote resource identifiers and environment-specific secret provisioning. Actual production migration remains an explicit release operation after the M5 runbook is complete.
