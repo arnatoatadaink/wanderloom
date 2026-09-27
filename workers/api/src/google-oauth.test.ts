@@ -54,6 +54,30 @@ describe("GoogleOAuthClient", () => {
     });
   });
 
+  it("preserves OAuth invalid_grant details for CP-39 classification", async () => {
+    const client = new GoogleOAuthClient(async () =>
+      Response.json(
+        {
+          error: "invalid_grant",
+          error_description: "Token has been expired or revoked."
+        },
+        { status: 400 }
+      )
+    );
+
+    await expect(client.refreshAccessToken({
+      refreshToken: "revoked-refresh-token",
+      clientId: "client-1",
+      clientSecret: "secret-1"
+    })).rejects.toEqual(
+      expect.objectContaining({
+        code: "google_token_http_400",
+        httpStatus: 400,
+        providerError: "invalid_grant"
+      } satisfies Partial<GoogleOAuthExchangeError>)
+    );
+  });
+
   it("maps non-success token responses to a stable exchange error", async () => {
     const client = new GoogleOAuthClient(async () =>
       new Response("", { status: 400 })
@@ -66,7 +90,9 @@ describe("GoogleOAuthClient", () => {
       redirectUri: "http://localhost:5173"
     })).rejects.toEqual(
       expect.objectContaining({
-        code: "google_token_http_400"
+        code: "google_token_http_400",
+        httpStatus: 400,
+        providerError: null
       } satisfies Partial<GoogleOAuthExchangeError>)
     );
   });
