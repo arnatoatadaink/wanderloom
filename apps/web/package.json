@@ -7,10 +7,14 @@
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "test:browser": "playwright test",
+    "typecheck:browser": "tsc -p tsconfig.browser.json --noEmit",
+    "test:browser:report": "playwright show-report",
     "build": "vite build",
     "measure:dist": "node scripts/measure-dist.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "vite": "8.2.2",
     "vitest": "4.1.11"
   }

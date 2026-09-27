@@ -17,7 +17,9 @@ export const API_ERROR_CODES = [
   "invalid_google_drive_authorization",
   "google_drive_identity_conflict",
   "google_drive_offline_access_required",
-  "google_drive_not_authorized"
+  "google_drive_not_authorized",
+  "google_drive_reauthorization_required",
+  "google_drive_provider_unavailable"
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
@@ -50,12 +52,15 @@ const STATUS_BY_CODE: Readonly<Record<ApiErrorCode, number>> = {
   invalid_google_drive_authorization: 401,
   google_drive_identity_conflict: 409,
   google_drive_offline_access_required: 400,
-  google_drive_not_authorized: 409
+  google_drive_not_authorized: 409,
+  google_drive_reauthorization_required: 401,
+  google_drive_provider_unavailable: 503
 };
 
 const RETRYABLE_CODES = new Set<ApiErrorCode>([
   "version_conflict",
-  "already_claimed"
+  "already_claimed",
+  "google_drive_provider_unavailable"
 ]);
 
 export function apiErrorStatus(code: ApiErrorCode): number {
