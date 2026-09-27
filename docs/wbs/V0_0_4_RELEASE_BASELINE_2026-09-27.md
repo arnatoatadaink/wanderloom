@@ -2,15 +2,17 @@
 
 ## Status
 
-**Prepared / M4 Complete / Pending main integration and tag**
+**Fixed / M4 Complete / Merged to main / Tagged**
 
 ## Release identity
 
-- Version: `v0.0.4` (provisional until main integration/tag)
+- Version: `v0.0.4`
 - Milestone: M4 — Seamless Persistence UX
 - M4 integration branch: `m4`
 - CP-42 merge commit on `m4`: `865590ab91fb7baa88e7b4c41b8b6060e301cb93`
-- Release tag: pending
+- Main release merge commit / tag target: `ba154ed6b7cab1caf1a7989a665c501003a3e060`
+- Release tag: `v0.0.4` (annotated, pushed)
+- Tag object: `ba5173533a413834a922485c86fca94297543961`
 - Main release PR: https://github.com/arnatoatadaink/wanderloom/pull/31
 
 ## Acceptance basis
@@ -80,14 +82,15 @@ The following remain outside M4 and do not block `v0.0.4`:
 - monetization implementation
 - broader archive lifecycle policy beyond the current Drive best-effort path
 
-## Finalization steps
+## Finalization evidence
 
-Before fixing `v0.0.4` as the immutable release baseline:
+PR #31 merged M4 into main on 2026-09-27. The actual merge commit above
+passed `bash scripts/cp42-acceptance.sh` (57 files / 189 tests), browser
+typecheck, and all 6 Chromium failure-path tests (28.5s, exit 0).
+The merge tree matched the accepted m4 head
+`16735d5d1b9e28f5b66558405c9ae81682aad5ff`.
 
-1. merge `m4` into `main`,
-2. rerun/confirm release acceptance on the resulting main commit if required,
-3. create annotated tag `v0.0.4` targeting the fixed main baseline commit,
-4. update this document with the main merge commit, tag target, tag object and release PR,
-5. produce a fixed-baseline record analogous to `V0_0_3_BASELINE_FIXED_2026-09-27.md`.
-
-Until those steps are complete, this document is the prepared M4 release baseline, not yet the immutable tagged main reference.
+The annotated `v0.0.4` tag was pushed without replacing any existing tag.
+See `docs/wbs/V0_0_4_BASELINE_FIXED_2026-09-27.md` for the fixed-baseline
+identity, validation scope, and deferred work. Later documentation commits do
+not change the immutable tag target.

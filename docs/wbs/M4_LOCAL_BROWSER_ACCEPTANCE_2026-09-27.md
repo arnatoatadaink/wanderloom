@@ -112,6 +112,18 @@ unverified; this evidence does not create a release tag or authorize a release.
 Reproduction and report instructions:
 `M4_BROWSER_FAILURE_RUNBOOK_2026-09-27.md`.
 
+## Final remote integration and tag
+
+PR #31 merged into remote main at
+`ba154ed6b7cab1caf1a7989a665c501003a3e060` on 2026-09-27.
+That exact commit passed the full CP-42 runner (189 tests), browser typecheck,
+and all 6 API-mocked Chromium tests (28.5s, exit 0).
+Annotated tag `v0.0.4` points to that tested commit and was pushed to origin.
+Earlier pending/integration statements in this record describe the evidence at
+their respective stages; the fixed release state is recorded in
+`V0_0_4_BASELINE_FIXED_2026-09-27.md`. Live Google failure-path checks remain
+unverified and are retained as a validation limitation.
+
 ## Future design feedback: automatic Drive synchronization
 
 The user requests that automatic synchronization be included in future design.
