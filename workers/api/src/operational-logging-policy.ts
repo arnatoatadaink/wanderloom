@@ -42,19 +42,22 @@ const FORBIDDEN_KEY_FRAGMENTS = [
   "password",
   "ciphertext",
   "refresh",
-  "access",
-  "id_token",
-  "code"
+  "access"
 ] as const;
 
 function normalizeKey(key: string): string {
-  return key.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_");
+  return key
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "_");
 }
 
 export function isForbiddenOperationalLogKey(key: string): boolean {
   const normalized = normalizeKey(key);
+  const segments = normalized.split(/_+/).filter((segment) => segment.length > 0);
   return FORBIDDEN_KEY_FRAGMENTS.some((fragment) =>
-    normalized.includes(fragment)
+    segments.includes(fragment)
   );
 }
 
@@ -95,13 +98,20 @@ export function createOperationalLogRecord(
   } = {}
 ): OperationalLogRecord {
   const details = sanitizeOperationalLogDetails(context.details);
+  const classificationInput = {
+    ...(context.retryable !== undefined
+      ? { retryable: context.retryable }
+      : {}),
+    ...(options.unexpected !== undefined
+      ? { unexpected: options.unexpected }
+      : {}),
+    ...(options.configurationMissing !== undefined
+      ? { configurationMissing: options.configurationMissing }
+      : {})
+  };
 
   return {
-    level: classifyOperationalLogLevel({
-      retryable: context.retryable,
-      unexpected: options.unexpected,
-      configurationMissing: options.configurationMissing
-    }),
+    level: classifyOperationalLogLevel(classificationInput),
     event,
     ...(context.requestId ? { requestId: context.requestId } : {}),
     ...(context.environment ? { environment: context.environment } : {}),
