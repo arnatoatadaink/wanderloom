@@ -1,6 +1,6 @@
 import "./styles.css";
 
-import { WanderloomApiClient } from "./api-client";
+import { BestEffortArchiveApiClient } from "./best-effort-archive-api-client";
 import { WanderloomApp } from "./app";
 import { BrowserGoogleIdentityBridge } from "./google-identity";
 
@@ -13,7 +13,7 @@ if (typeof document !== "undefined") {
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() || null;
     const app = new WanderloomApp(
       root,
-      new WanderloomApiClient(),
+      new BestEffortArchiveApiClient(),
       localStorage,
       Date.now,
       new BrowserGoogleIdentityBridge(googleClientId)
