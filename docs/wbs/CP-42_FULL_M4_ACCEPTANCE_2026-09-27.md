@@ -2,7 +2,7 @@
 
 ## Status
 
-**In validation**
+**Accepted / Complete**
 
 ## Objective
 
@@ -84,35 +84,54 @@ pnpm build
 - `not_connected`, `reauthorization_required`, and `unknown` never trigger automatic OAuth consent
 - manual sync/reconnect remains available as the recovery path
 
-## Local validation evidence required
+## Final local validation evidence
 
-Record the final local results below before marking CP-42 Accepted:
+Executed on 2026-09-27 with:
+
+```bash
+bash scripts/cp42-acceptance.sh
+```
+
+Observed results:
 
 ```text
-pnpm typecheck
-<result>
+[CP-42] migrations 0001-0006: PASS
 
-pnpm test
-<workspace/test totals>
+workspace typecheck: PASS
+- apps/web: PASS
+- packages/game-core: PASS
+- workers/api: PASS
 
-pnpm build
-<result including Wrangler dry-run>
+workspace tests: PASS
+- packages/game-core: 19 files / 65 tests
+- apps/web: 14 files / 48 tests
+- workers/api: 24 files / 76 tests
+- aggregate: 57 files / 189 tests
 
-bash scripts/cp42-acceptance.sh
-<final PASS/FAIL>
+workspace build: PASS
+- apps/web: Vite production build PASS
+- packages/game-core: TypeScript build PASS
+- workers/api: Wrangler deploy --dry-run PASS
+
+Wrangler 4.132.0 dry-run:
+- Worker bundle generated
+- D1 binding wanderloom-local resolved
+- dry-run exited successfully
+
+[CP-42] full automated acceptance: PASS
 ```
 
 ## Exit criteria
 
-- migration set 0001–0006 verified: pending local runner
-- all workspace typechecks green: pending local runner
-- all workspace tests green: pending local runner
-- all workspace builds green: pending local runner
-- Wrangler dry-run green: pending local runner
-- CP-36 through CP-41 behavioral contracts covered by regression suites: pending aggregate run
+- migration set 0001–0006 verified: **PASS**
+- all workspace typechecks green: **PASS**
+- all workspace tests green: **PASS — 189 tests**
+- all workspace builds green: **PASS**
+- Wrangler dry-run green: **PASS**
+- CP-36 through CP-41 behavioral contracts covered by regression suites: **PASS**
 
 ## Result
 
-CP-42 remains **In validation** until the full local acceptance runner is green.
+CP-42 is **Accepted / Complete**.
 
-Once green, M4 **Seamless Persistence UX** can be marked Complete and prepared for the provisional `v0.0.4` release baseline.
+M4 **Seamless Persistence UX** is therefore **Complete**. The repository is ready for the provisional `v0.0.4` release baseline preparation and final release integration steps.
