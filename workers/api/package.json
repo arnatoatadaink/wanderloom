@@ -7,7 +7,8 @@
     "dev": "wrangler dev",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "build": "wrangler deploy --dry-run --outdir dist"
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "config:remote": "node scripts/generate-remote-wrangler-config.mjs"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "1.1.12",
