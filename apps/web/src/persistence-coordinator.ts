@@ -8,6 +8,10 @@ export class PersistenceCoordinator {
     return this.controller.getState();
   }
 
+  async refreshDriveStatus(): Promise<PersistenceViewState> {
+    return this.controller.refreshDriveStatus();
+  }
+
   async afterGuestLoad(): Promise<PersistenceViewState> {
     this.controller.markGuest();
     return this.controller.refreshDriveStatus();
