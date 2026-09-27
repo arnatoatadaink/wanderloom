@@ -5,6 +5,12 @@ import { buildRemoteWranglerConfig } from "./remote-wrangler-config";
 const stagingId = "11111111-1111-4111-8111-111111111111";
 const productionId = "22222222-2222-4222-8222-222222222222";
 
+const requiredSecrets = [
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+  "ARCHIVE_TOKEN_ENCRYPTION_KEY"
+];
+
 describe("CP-43 remote Wrangler config generation", () => {
   it("renders isolated staging and production bindings without committing IDs", () => {
     const config = buildRemoteWranglerConfig({
@@ -18,12 +24,15 @@ describe("CP-43 remote Wrangler config generation", () => {
       database_name: "wanderloom-staging",
       database_id: stagingId
     });
+    expect(config.env.staging.secrets.required).toEqual(requiredSecrets);
+
     expect(config.env.production.name).toBe("wanderloom-api");
     expect(config.env.production.d1_databases[0]).toMatchObject({
       binding: "DB",
       database_name: "wanderloom-production",
       database_id: productionId
     });
+    expect(config.env.production.secrets.required).toEqual(requiredSecrets);
   });
 
   it("rejects missing or malformed D1 IDs", () => {
