@@ -5,6 +5,9 @@ import {
   type ZoneDto
 } from "./api-client";
 import type { GoogleIdentityBridge } from "./google-identity";
+import { PersistenceController } from "./persistence-controller";
+import { PersistenceCoordinator } from "./persistence-coordinator";
+import { toPersistenceStatusView } from "./persistence-status-view";
 import {
   chooseInitialSelection,
   deriveExplorationPhase,
@@ -27,6 +30,7 @@ export class WanderloomApp {
   private accountStatusMessage: string | null = null;
   private googleAccountReady = false;
   private archiveStatusMessage: string | null = null;
+  private readonly persistence: PersistenceCoordinator;
 
   constructor(
     private readonly root: HTMLElement,
@@ -40,7 +44,11 @@ export class WanderloomApp {
         throw new Error("Google Identity Services is not configured");
       }
     }
-  ) {}
+  ) {
+    this.persistence = new PersistenceCoordinator(
+      new PersistenceController(this.api)
+    );
+  }
 
   async start(): Promise<void> {
     this.render();
@@ -56,6 +64,7 @@ export class WanderloomApp {
   private async loadRemoteState(forceGuest = false): Promise<void> {
     try {
       const storedPlayerId = this.storage.getItem(PLAYER_STORAGE_KEY);
+      const loadedStoredPlayer = storedPlayerId !== null;
       if (storedPlayerId === null) {
         if (this.googleIdentity.enabled && !forceGuest) {
           this.offerGoogleRestore = true;
@@ -99,6 +108,13 @@ export class WanderloomApp {
         errorMessage: null
       };
       this.ensureTimer();
+      this.render();
+
+      if (loadedStoredPlayer) {
+        await this.persistence.afterStoredPlayerLoad();
+      } else {
+        await this.persistence.afterGuestLoad();
+      }
       this.render();
     } catch (error) {
       this.fail(error);
@@ -218,6 +234,7 @@ export class WanderloomApp {
         this.offerGoogleRestore = false;
         this.accountStatusMessage = "Google account restored.";
         this.googleAccountReady = true;
+        await this.persistence.afterGoogleRestore();
         await this.loadRemoteState(false);
         return;
       }
@@ -228,6 +245,7 @@ export class WanderloomApp {
           ? "Google account already linked."
           : "Google account linked.";
       this.googleAccountReady = true;
+      await this.persistence.afterGoogleLink();
       this.state = { ...this.state, busy: false, errorMessage: null };
       this.render();
     } catch (error) {
@@ -243,6 +261,7 @@ export class WanderloomApp {
     try {
       const code = await this.googleIdentity.requestDriveAuthorization();
       await this.api.authorizeGoogleDrive(code, window.location.origin);
+      await this.persistence.afterDriveAuthorization();
       const sync = await this.api.syncArchive();
       this.archiveStatusMessage = `Archive sync complete: ${sync.synced} synced, ${sync.failed} failed.`;
       this.state = { ...this.state, busy: false, errorMessage: null };
@@ -263,6 +282,7 @@ export class WanderloomApp {
       this.render();
     }
   }
+
   private async startExploration(): Promise<void> {
     const zoneId = this.state.selectedZoneId;
     const durationId = this.state.selectedDurationId;
@@ -481,6 +501,9 @@ export class WanderloomApp {
     const duration = zone?.durations.find(
       (entry) => entry.durationId === this.state.selectedDurationId
     );
+    const persistenceView = toPersistenceStatusView(
+      this.persistence.getState()
+    );
 
     return `
       <div class="section-heading">
@@ -535,7 +558,10 @@ export class WanderloomApp {
 
       ${this.googleIdentity.enabled ? `
         <div class="account-panel">
-          <span class="field-label">Account</span>
+          <span class="field-label">Account & persistence</span>
+          <p class="account-status">Google account: ${escapeHtml(persistenceView.googleLabel)}</p>
+          <p class="account-status">Drive archive: ${escapeHtml(persistenceView.driveLabel)}</p>
+          ${persistenceView.driveMessage ? `<p class="hint">${escapeHtml(persistenceView.driveMessage)}</p>` : ""}
           <p class="hint">Link this guest progress to Google for restore on another browser.</p>
           ${this.accountStatusMessage ? `<p class="account-status">${escapeHtml(this.accountStatusMessage)}</p>` : ""}
           <div id="google-link-button" class="google-identity-host"></div>
@@ -698,6 +724,7 @@ export class WanderloomApp {
       </div>
     `;
   }
+
   private renderError(): string {
     return `
       <div class="center-state">
