@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress — deterministic smoke contract implemented**
+**Accepted / Complete**
 
 ## Objective
 
@@ -220,17 +220,23 @@ Release evidence must not contain:
 - migration checks are target-specific,
 - unsafe remote base URLs are rejected.
 
-## Acceptance evidence required
+## Acceptance evidence
 
-Before CP-47 can be Accepted:
+Local validation on 2026-09-27:
 
-1. API typecheck PASS,
-2. all API tests PASS,
-3. API local Wrangler build/dry-run PASS,
-4. post-deploy smoke contract tests PASS,
-5. immediate/delayed/operator phases documented,
-6. claim duration constraint explicitly preserved,
-7. migration-state verification documented for both environments,
-8. Google/Drive credential handling is non-secret and non-destructive by default,
-9. smoke failure blocks promotion/release completion,
-10. no real remote deployment is required merely to accept the contract; live staging execution becomes deployment evidence when a real staging Worker is intentionally provisioned.
+- API typecheck: PASS
+- API tests: **30 files / 95 tests PASS**
+- API Wrangler local build/dry-run: PASS
+- post-deploy smoke contract tests: PASS
+- immediate / delayed / migration-state phases: documented and enforced
+- 300-second claim constraint: preserved
+- Google/Drive checks: non-secret and non-destructive by default
+- smoke failure policy: fail-closed / release-blocking
+- working tree after validation: clean
+- no real remote staging/production deployment performed as part of contract acceptance
+
+## Acceptance decision
+
+CP-47 is Accepted because the deterministic post-deploy smoke contract, failure gates, migration-state verification boundary, and secret-safe evidence rules are fixed and regression-clean.
+
+Live execution against a real staging Worker remains deployment evidence rather than a prerequisite for accepting the contract itself.
