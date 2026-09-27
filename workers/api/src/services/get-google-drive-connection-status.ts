@@ -40,7 +40,9 @@ export async function getGoogleDriveConnectionStatus(input: {
   }
 
   return {
-    state: "connected",
+    state: authorization.reauthorizationRequired
+      ? "reauthorization_required"
+      : "connected",
     grantedScope: authorization.grantedScope,
     authorizedAt: authorization.authorizedAt,
     updatedAt: authorization.updatedAt

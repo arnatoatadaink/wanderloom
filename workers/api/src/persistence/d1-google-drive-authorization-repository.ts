@@ -7,6 +7,8 @@ interface GoogleDriveAuthorizationRow {
   readonly granted_scope: string;
   readonly authorized_at: string;
   readonly updated_at: string;
+  readonly reauthorization_required: number;
+  readonly reauthorization_reason: string | null;
 }
 
 export interface GoogleDriveAuthorization {
@@ -15,6 +17,8 @@ export interface GoogleDriveAuthorization {
   readonly grantedScope: string;
   readonly authorizedAt: string;
   readonly updatedAt: string;
+  readonly reauthorizationRequired: boolean;
+  readonly reauthorizationReason: string | null;
 }
 
 export class D1GoogleDriveAuthorizationRepository {
@@ -29,7 +33,9 @@ export class D1GoogleDriveAuthorizationRepository {
                 refresh_token_iv,
                 granted_scope,
                 authorized_at,
-                updated_at
+                updated_at,
+                reauthorization_required,
+                reauthorization_reason
          FROM google_drive_authorizations
          WHERE player_id = ?1
          LIMIT 1`
@@ -44,7 +50,9 @@ export class D1GoogleDriveAuthorizationRepository {
       refreshTokenIv: row.refresh_token_iv,
       grantedScope: row.granted_scope,
       authorizedAt: row.authorized_at,
-      updatedAt: row.updated_at
+      updatedAt: row.updated_at,
+      reauthorizationRequired: row.reauthorization_required !== 0,
+      reauthorizationReason: row.reauthorization_reason
     };
   }
 
@@ -63,13 +71,17 @@ export class D1GoogleDriveAuthorizationRepository {
            refresh_token_iv,
            granted_scope,
            authorized_at,
-           updated_at
-         ) VALUES (?1, ?2, ?3, ?4, ?5, ?5)
+           updated_at,
+           reauthorization_required,
+           reauthorization_reason
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?5, 0, NULL)
          ON CONFLICT(player_id) DO UPDATE SET
            refresh_token_ciphertext = excluded.refresh_token_ciphertext,
            refresh_token_iv = excluded.refresh_token_iv,
            granted_scope = excluded.granted_scope,
-           updated_at = excluded.updated_at`
+           updated_at = excluded.updated_at,
+           reauthorization_required = 0,
+           reauthorization_reason = NULL`
       )
       .bind(
         input.playerId,
@@ -78,6 +90,23 @@ export class D1GoogleDriveAuthorizationRepository {
         input.grantedScope,
         input.authorizedAt
       )
+      .run();
+  }
+
+  async markReauthorizationRequired(input: {
+    readonly playerId: PlayerId;
+    readonly reason: string;
+    readonly updatedAt: string;
+  }): Promise<void> {
+    await this.db
+      .prepare(
+        `UPDATE google_drive_authorizations
+         SET reauthorization_required = 1,
+             reauthorization_reason = ?2,
+             updated_at = ?3
+         WHERE player_id = ?1`
+      )
+      .bind(input.playerId, input.reason, input.updatedAt)
       .run();
   }
 }

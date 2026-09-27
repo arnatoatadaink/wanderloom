@@ -12,10 +12,15 @@ interface GoogleTokenResponse {
   readonly id_token?: string;
   readonly scope?: string;
   readonly expires_in?: number;
+  readonly error?: string;
 }
 
 export class GoogleOAuthExchangeError extends Error {
-  constructor(readonly code: string) {
+  constructor(
+    readonly code: string,
+    readonly httpStatus: number | null = null,
+    readonly providerError: string | null = null
+  ) {
     super(code);
   }
 }
@@ -67,8 +72,19 @@ export class GoogleOAuthClient {
     );
 
     if (!response.ok) {
+      let providerError: string | null = null;
+      try {
+        const payload = (await response.json()) as GoogleTokenResponse;
+        providerError =
+          typeof payload.error === "string" ? payload.error : null;
+      } catch {
+        providerError = null;
+      }
+
       throw new GoogleOAuthExchangeError(
-        `google_token_http_${response.status}`
+        `google_token_http_${response.status}`,
+        response.status,
+        providerError
       );
     }
 
