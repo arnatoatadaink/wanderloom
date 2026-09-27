@@ -89,6 +89,18 @@ export interface ClaimResultDto {
   };
 }
 
+export type GoogleDriveConnectionStateDto =
+  | "not_connected"
+  | "connected"
+  | "reauthorization_required";
+
+export interface GoogleDriveConnectionStatusDto {
+  readonly state: GoogleDriveConnectionStateDto;
+  readonly grantedScope: string | null;
+  readonly authorizedAt: string | null;
+  readonly updatedAt: string | null;
+}
+
 export interface ApiErrorBody {
   readonly ok: false;
   readonly error: {
@@ -201,6 +213,14 @@ export class WanderloomApiClient {
 
     this.playerId = body.playerId;
     return body;
+  }
+
+  async getGoogleDriveConnectionStatus(): Promise<GoogleDriveConnectionStatusDto> {
+    const body = await this.request<{
+      readonly ok: true;
+      readonly connection: GoogleDriveConnectionStatusDto;
+    }>("/api/archive/google/status");
+    return body.connection;
   }
 
   async authorizeGoogleDrive(
