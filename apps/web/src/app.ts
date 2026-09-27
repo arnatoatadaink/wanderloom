@@ -4,6 +4,7 @@ import {
   type ClaimResultDto,
   type ZoneDto
 } from "./api-client";
+import { runArchiveSyncFlow } from "./archive-sync-flow";
 import type { GoogleIdentityBridge } from "./google-identity";
 import { PersistenceController } from "./persistence-controller";
 import { PersistenceCoordinator } from "./persistence-coordinator";
@@ -255,14 +256,27 @@ export class WanderloomApp {
 
   private async authorizeAndSyncArchive(): Promise<void> {
     this.state = { ...this.state, busy: true, errorMessage: null };
-    this.archiveStatusMessage = "Requesting Google Drive permission…";
+    const persistenceState = this.persistence.getState();
+    this.archiveStatusMessage =
+      persistenceState.driveArchive === "connected"
+        ? "Syncing Drive archive…"
+        : "Requesting Google Drive permission…";
     this.render();
 
     try {
-      const code = await this.googleIdentity.requestDriveAuthorization();
-      await this.api.authorizeGoogleDrive(code, window.location.origin);
-      await this.persistence.afterDriveAuthorization();
-      const sync = await this.api.syncArchive();
+      const sync = await runArchiveSyncFlow({
+        persistence: persistenceState,
+        origin: window.location.origin,
+        dependencies: {
+          requestDriveAuthorization: () =>
+            this.googleIdentity.requestDriveAuthorization(),
+          authorizeGoogleDrive: (code, origin) =>
+            this.api.authorizeGoogleDrive(code, origin),
+          afterDriveAuthorization: () =>
+            this.persistence.afterDriveAuthorization(),
+          syncArchive: () => this.api.syncArchive()
+        }
+      });
       this.archiveStatusMessage = `Archive sync complete: ${sync.synced} synced, ${sync.failed} failed.`;
       this.state = { ...this.state, busy: false, errorMessage: null };
       this.render();
