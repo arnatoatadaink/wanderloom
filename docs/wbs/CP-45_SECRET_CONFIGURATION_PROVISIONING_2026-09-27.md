@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress — inventory, provisioning contract, and first-time bootstrap path implemented**
+**Accepted / Complete**
 
 ## Objective
 
@@ -103,58 +103,17 @@ This writes:
 workers/api/.wrangler/remote/wrangler.bootstrap.json
 ```
 
-Create the staging Worker only after real D1 IDs exist:
-
-```bash
-cd workers/api
-pnpm exec wrangler deploy \
-  --env staging \
-  --config .wrangler/remote/wrangler.bootstrap.json
-```
-
-The bootstrap deploy is a one-time provisioning step. Do not use the bootstrap config for normal releases.
+Create the staging Worker only after real D1 IDs exist. The bootstrap deploy is a one-time provisioning step and must not be used for normal releases.
 
 ## Worker secret provisioning
 
-After the Worker exists, provision the three Worker secrets independently per environment using the normal remote config path:
+After the Worker exists, provision the three Worker secrets independently per environment using the normal remote config path. Do not place secret values on the command line; Wrangler should read them interactively/stdin so values do not appear in shell history.
 
-```bash
-cd workers/api
-pnpm exec wrangler secret put GOOGLE_CLIENT_ID \
-  --env staging \
-  --config .wrangler/remote/wrangler.remote.json
-
-pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET \
-  --env staging \
-  --config .wrangler/remote/wrangler.remote.json
-
-pnpm exec wrangler secret put ARCHIVE_TOKEN_ENCRYPTION_KEY \
-  --env staging \
-  --config .wrangler/remote/wrangler.remote.json
-```
-
-Do not place secret values on the command line. Let Wrangler read them interactively/stdin so values do not appear in shell history.
-
-After all three secrets exist, deploy the normal config so `secrets.required` becomes active:
-
-```bash
-pnpm exec wrangler deploy \
-  --env staging \
-  --config .wrangler/remote/wrangler.remote.json
-```
-
-Production uses the same sequence only as an explicit, separately approved operator action.
+After all three secrets exist, deploy the normal config so `secrets.required` becomes active. Production uses the same sequence only as an explicit, separately approved operator action.
 
 ## Presence verification
 
-List only secret names after provisioning:
-
-```bash
-pnpm exec wrangler secret list \
-  --format json \
-  --env staging \
-  --config .wrangler/remote/wrangler.remote.json
-```
+Use `wrangler secret list --format json --env <target> --config <normal-config>` to verify names only.
 
 Expected names:
 
@@ -180,9 +139,7 @@ This value is public by design and becomes part of the browser bundle. It must c
 
 `validateProvisioningPresence()` fails closed when any required Worker secret or Web build variable is absent. Tests verify the expected secret-name set and explicit staging/production targeting.
 
-The generated normal remote config also declares `secrets.required`, so normal deployment fails clearly when the required Worker secrets are absent.
-
-At runtime, existing API routes return `not_ready` for Google OIDC / Drive OAuth / Drive sync when required secret fields are absent rather than silently attempting provider operations.
+The generated normal remote config declares `secrets.required`; the generated bootstrap config intentionally omits it. At runtime, existing API routes return `not_ready` for Google OIDC / Drive OAuth / Drive sync when required secret fields are absent rather than silently attempting provider operations.
 
 ## Staging-first verification sequence
 
@@ -192,41 +149,32 @@ At runtime, existing API routes return `not_ready` for Google OIDC / Drive OAuth
 4. Provision the three staging Worker secrets.
 5. Verify the three secret names with `wrangler secret list`.
 6. Deploy the staging Worker with the normal config.
-7. Run the safe migration preview:
-
-```bash
-pnpm --filter @wanderloom/api migrate:remote -- --target staging
-```
-
+7. Run the safe migration preview.
 8. Review pending migrations before any explicit staging apply.
 9. Production provisioning remains a separate operator action.
 
-## Current validation evidence
+## Acceptance evidence
 
-Local contract validation on 2026-09-27:
+Accepted on 2026-09-27 with the following evidence supplied from the local WSL environment:
 
 - API typecheck: PASS
-- API tests: 28 files / 89 tests PASS
-- local Wrangler dry-run: PASS
-- generated remote config: PASS
-- generated files remain ignored by Git: PASS
-- `wrangler secret list --env staging`: expected provisioning failure because `wanderloom-api-staging` does not yet exist remotely
+- API tests: **28 files / 89 tests PASS**
+- local Wrangler 4.132.0 deploy dry-run: PASS
+- generated normal remote config: PASS
+- generated bootstrap config: PASS
+- normal config contains `secrets.required` with exactly:
+  - `GOOGLE_CLIENT_ID`
+  - `GOOGLE_CLIENT_SECRET`
+  - `ARCHIVE_TOKEN_ENCRYPTION_KEY`
+- bootstrap config contains no `secrets` block: PASS
+- generated `.wrangler` material remains ignored by Git: PASS
+- `git status --short`: clean
+- attempted staging `secret list` correctly reported that `wanderloom-api-staging` does not yet exist remotely; this is expected before first-time bootstrap
+- no real remote D1 UUIDs, OAuth secret values, encryption key values, refresh tokens, or access tokens were committed or pasted into the acceptance record
+- no production secret provisioning, migration, or deployment was performed
 
-The missing remote Worker is not a secret-contract failure; it triggered definition of the first-time bootstrap procedure above.
+## Deferred operational evidence
 
-## Acceptance evidence required
+Real staging D1 creation, one-time Worker bootstrap, staging secret provisioning, staging migration preview, and normal staging deployment remain intentionally deferred until the deployment runbook is exercised. These are operational release actions and are covered by the next M5 stages rather than source-contract acceptance.
 
-Before CP-45 can be Accepted:
-
-1. API typecheck PASS,
-2. all API tests PASS,
-3. local Wrangler dry-run PASS,
-4. configuration inventory tests PASS,
-5. normal generated remote config contains `secrets.required` with exactly the three canonical Worker secret names,
-6. bootstrap generated config omits `secrets.required`,
-7. `.dev.vars.example` contains names only and no real secret values,
-8. `git status --short` is clean after local generated config use,
-9. real remote staging provisioning may remain deferred if real D1 resources are not yet intentionally created; if available, `secret list` and migration preview should be exercised,
-10. production secret/migration execution remains optional and explicit for CP-45 acceptance.
-
-Real secret values must not be pasted into acceptance reports or committed artifacts.
+Production provisioning remains explicit and separately approved.
