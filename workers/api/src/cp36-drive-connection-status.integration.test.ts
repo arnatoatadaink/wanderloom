@@ -16,12 +16,15 @@ const disconnectedPlayerId = "player-cp36-disconnected" as PlayerId;
 const connectedPlayerId = "player-cp36-connected" as PlayerId;
 
 function statusRequest(playerId?: PlayerId): Request {
-  return new Request("https://wanderloom.test/api/archive/google/status", {
-    method: "GET",
-    headers: playerId
-      ? { "x-wanderloom-player-id": playerId }
-      : undefined
-  });
+  const init: RequestInit = { method: "GET" };
+  if (playerId !== undefined) {
+    init.headers = { "x-wanderloom-player-id": playerId };
+  }
+
+  return new Request(
+    "https://wanderloom.test/api/archive/google/status",
+    init
+  );
 }
 
 describe("CP-36 Google Drive connection status API", () => {
