@@ -1,0 +1,6 @@
+# Local-only development secret template.
+# Copy to .dev.vars and never commit real values.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+# Base64-encoded 32-byte key used by AesGcmSecretCipher.
+ARCHIVE_TOKEN_ENCRYPTION_KEY=
