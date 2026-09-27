@@ -9,6 +9,7 @@
     "test": "vitest run",
     "build": "wrangler deploy --dry-run --outdir dist",
     "config:remote": "node scripts/generate-remote-wrangler-config.mjs",
+    "config:remote:bootstrap": "node scripts/generate-remote-wrangler-config.mjs --bootstrap",
     "migrate:remote": "node scripts/remote-d1-migrate.mjs"
   },
   "devDependencies": {

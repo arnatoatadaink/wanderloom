@@ -1,4 +1,5 @@
 import { DEPLOYMENT_ENVIRONMENTS } from "./deployment-environment";
+import { REQUIRED_WORKER_SECRETS } from "./configuration-provisioning";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -17,6 +18,9 @@ export interface RemoteWranglerDatabaseBinding {
 export interface RemoteWranglerEnvironment {
   readonly name: string;
   readonly d1_databases: readonly RemoteWranglerDatabaseBinding[];
+  readonly secrets: {
+    readonly required: readonly string[];
+  };
 }
 
 export interface RemoteWranglerConfig {
@@ -35,6 +39,10 @@ function requireDatabaseId(name: string, value: string): string {
     throw new Error(`${name} must be a non-empty D1 UUID`);
   }
   return normalized;
+}
+
+function requiredSecrets() {
+  return { required: [...REQUIRED_WORKER_SECRETS] } as const;
 }
 
 export function buildRemoteWranglerConfig(
@@ -67,7 +75,8 @@ export function buildRemoteWranglerConfig(
             database_id: stagingDatabaseId,
             migrations_dir: "migrations"
           }
-        ]
+        ],
+        secrets: requiredSecrets()
       },
       production: {
         name: DEPLOYMENT_ENVIRONMENTS.production.workerName,
@@ -78,7 +87,8 @@ export function buildRemoteWranglerConfig(
             database_id: productionDatabaseId,
             migrations_dir: "migrations"
           }
-        ]
+        ],
+        secrets: requiredSecrets()
       }
     }
   };
