@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress — deployment/rollback contract implemented**
+**Accepted / Complete**
 
 ## Objective
 
@@ -222,18 +222,24 @@ Stop promotion/deployment if any of the following is true:
 
 Tests are in `workers/api/src/deployment-runbook.test.ts`.
 
-## Acceptance evidence required
+## Acceptance evidence — 2026-09-27
 
-Before CP-46 can be Accepted:
+- API typecheck: PASS
+- API tests: **29 files / 92 tests PASS**
+- API local Wrangler build/dry-run: PASS
+- Web typecheck: PASS
+- Web tests: **14 files / 48 tests PASS**
+- Web Vite production build: PASS
+- validated source revision: `d4a11f7e18e86a74c8ac528b69ebae589d2c49fe`
+- `git status --short`: clean
+- deployment command-contract tests: PASS
+- staging-first and production promotion sequences: documented
+- Worker rollback requires explicit version ID: documented/tested
+- Worker rollback and D1 recovery separation: documented
+- D1 Time Travel recovery boundary: documented
+- Web remote hosting/rollback remains explicitly unresolved until a hosting platform is selected
+- no real remote deploy, Worker rollback, production migration, or D1 recovery was performed for CP-46 acceptance
 
-1. API typecheck PASS,
-2. all API tests PASS,
-3. API local build/dry-run PASS,
-4. Web typecheck/tests/build PASS,
-5. deployment command-contract tests PASS,
-6. runbook records source SHA/tag and clean-tree rules,
-7. staging-first and production sequences are explicit,
-8. Worker rollback requires an explicit version ID,
-9. D1 rollback limitations and Time Travel boundary are explicit,
-10. Web remote deploy/rollback remains marked as unresolved until a hosting platform is selected,
-11. no remote deployment or database recovery is required merely to accept the runbook contract.
+## Acceptance conclusion
+
+CP-46 is **Accepted / Complete**. The repository now has a deterministic deploy/rollback contract suitable for CP-47 post-deploy health/smoke implementation. Remote execution remains intentionally deferred until real staging resources and an explicit deployment decision exist.
