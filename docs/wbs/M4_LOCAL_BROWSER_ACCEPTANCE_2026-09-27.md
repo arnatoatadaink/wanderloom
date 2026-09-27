@@ -60,6 +60,28 @@ points to the m4 baseline recorded above at receipt.
 
 Automated coverage is separate from the four unverified browser scenarios above.
 
+## Local main integration validation
+
+On 2026-09-27, local main integrated m4 without conflicts:
+
+- Main parent: `c698e440dd1f1be2063fe545e1f22af188c672ca`
+- M4 parent: `b04eaf79415f50736b78c0b43f148e9af948e704`
+- Tested local merge: `bb16a0c87c13e140d7e245ee037f192f7d27a721`
+- `bash scripts/cp42-acceptance.sh`: PASS (exit 0)
+- Migration set 0001–0006 and all workspace typechecks: PASS
+- Tests: 57 files / 189 tests PASS (game-core 65, web 48, api 76)
+- All workspace builds and Wrangler deploy dry-run: PASS
+- Runtime: Node 22.20.0, matching `.nvmrc`
+
+The first sandboxed attempt failed because Vite could not write temporary files
+through the node_modules symlink into the WSL dependency directory. The complete
+runner passed after granting access to the existing dependency environment.
+No application changes were needed.
+
+Integration PR: https://github.com/arnatoatadaink/wanderloom/pull/31 (Draft).
+Remote main has not been changed and v0.0.4 has not been tagged. Browser failure
+paths remain unverified; the earlier browser observations concern the m4 baseline.
+
 Before final release acceptance, verify the resulting main commit using
 `V0_0_4_MAIN_LOCAL_ACCEPTANCE_CHECKLIST_2026-09-27.md` and record remaining
 browser scenarios as PASS, FAIL or explicitly unverified. This record does not
