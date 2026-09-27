@@ -31,6 +31,7 @@ export class WanderloomApp {
   private accountStatusMessage: string | null = null;
   private googleAccountReady = false;
   private archiveStatusMessage: string | null = null;
+  private driveBusy = false;
   private readonly persistence: PersistenceCoordinator;
 
   constructor(
@@ -255,12 +256,16 @@ export class WanderloomApp {
   }
 
   private async authorizeAndSyncArchive(): Promise<void> {
-    this.state = { ...this.state, busy: true, errorMessage: null };
     const persistenceState = this.persistence.getState();
+    this.driveBusy = true;
     this.archiveStatusMessage =
-      persistenceState.driveArchive === "connected"
-        ? "Syncing Drive archive…"
-        : "Requesting Google Drive permission…";
+      persistenceState.driveArchive === "reauthorization_required"
+        ? "Requesting Google Drive reconnection…"
+        : persistenceState.driveArchive === "temporarily_unavailable"
+          ? "Retrying Drive archive…"
+          : persistenceState.driveArchive === "connected"
+            ? "Syncing Drive archive…"
+            : "Requesting Google Drive permission…";
     this.render();
 
     try {
@@ -277,10 +282,12 @@ export class WanderloomApp {
           syncArchive: () => this.api.syncArchive()
         }
       });
+      await this.persistence.refreshDriveStatus();
       this.archiveStatusMessage = `Archive sync complete: ${sync.synced} synced, ${sync.failed} failed.`;
-      this.state = { ...this.state, busy: false, errorMessage: null };
+      this.driveBusy = false;
       this.render();
     } catch (error) {
+      await this.persistence.refreshDriveStatus();
       const message =
         error instanceof ApiError
           ? `${error.code} (HTTP ${error.status})`
@@ -288,11 +295,7 @@ export class WanderloomApp {
             ? error.message
             : "Unknown error";
       this.archiveStatusMessage = `Drive archive unavailable: ${message}`;
-      this.state = {
-        ...this.state,
-        busy: false,
-        errorMessage: null
-      };
+      this.driveBusy = false;
       this.render();
     }
   }
@@ -579,9 +582,9 @@ export class WanderloomApp {
           <p class="hint">Link this guest progress to Google for restore on another browser.</p>
           ${this.accountStatusMessage ? `<p class="account-status">${escapeHtml(this.accountStatusMessage)}</p>` : ""}
           <div id="google-link-button" class="google-identity-host"></div>
-          ${this.googleAccountReady ? `
-            <button id="authorize-drive-archive" class="secondary-action" type="button" ${this.state.busy ? "disabled" : ""}>
-              Enable Drive archive
+          ${persistenceView.driveActionLabel ? `
+            <button id="authorize-drive-archive" class="secondary-action" type="button" ${this.driveBusy ? "disabled" : ""}>
+              ${escapeHtml(this.driveBusy ? "Working…" : persistenceView.driveActionLabel)}
             </button>
             ${this.archiveStatusMessage ? `<p class="account-status">${escapeHtml(this.archiveStatusMessage)}</p>` : ""}
           ` : ""}
