@@ -33,6 +33,15 @@ export function validateProvisioningPresence(
   return problems;
 }
 
+export function validateListedWorkerSecrets(
+  listedNames: readonly string[]
+): readonly string[] {
+  const present = new Set(listedNames);
+  return REQUIRED_WORKER_SECRETS
+    .filter((name) => !present.has(name))
+    .map((name) => `missing_remote_worker_secret:${name}`);
+}
+
 export function expectedWorkerSecretPutCommands(
   target: RemoteProvisioningTarget
 ): readonly string[][] {
@@ -55,6 +64,8 @@ export function expectedWorkerSecretListCommand(
     "wrangler",
     "secret",
     "list",
+    "--format",
+    "json",
     "--env",
     target,
     "--config",
