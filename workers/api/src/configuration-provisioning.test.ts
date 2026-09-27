@@ -5,6 +5,7 @@ import {
   REQUIRED_WORKER_SECRETS,
   expectedWorkerSecretListCommand,
   expectedWorkerSecretPutCommands,
+  validateListedWorkerSecrets,
   validateProvisioningPresence
 } from "./configuration-provisioning";
 
@@ -36,6 +37,17 @@ describe("CP-45 configuration provisioning", () => {
     ]);
   });
 
+  it("validates only remote secret names and never requires secret values", () => {
+    expect(
+      validateListedWorkerSecrets([
+        "GOOGLE_CLIENT_ID",
+        "ARCHIVE_TOKEN_ENCRYPTION_KEY"
+      ])
+    ).toEqual(["missing_remote_worker_secret:GOOGLE_CLIENT_SECRET"]);
+
+    expect(validateListedWorkerSecrets([...REQUIRED_WORKER_SECRETS])).toEqual([]);
+  });
+
   it("keeps staging and production secret operations explicitly targeted", () => {
     expect(expectedWorkerSecretPutCommands("staging")[0]).toEqual([
       "wrangler",
@@ -51,6 +63,8 @@ describe("CP-45 configuration provisioning", () => {
       "wrangler",
       "secret",
       "list",
+      "--format",
+      "json",
       "--env",
       "production",
       "--config",
