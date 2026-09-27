@@ -3,7 +3,7 @@ import {
   initialPersistenceViewState,
   type PersistenceViewState
 } from "./persistence-state";
-import { loadPersistenceStatus } from "./persistence-state-loader";
+import { loadDrivePersistenceState } from "./persistence-state-loader";
 
 export class PersistenceController {
   private state: PersistenceViewState = initialPersistenceViewState();
@@ -31,7 +31,10 @@ export class PersistenceController {
   }
 
   async refreshDriveStatus(): Promise<PersistenceViewState> {
-    this.state = await loadPersistenceStatus(this.api, this.state);
+    this.state = await loadDrivePersistenceState({
+      api: this.api,
+      current: this.state
+    });
     return this.state;
   }
 }
