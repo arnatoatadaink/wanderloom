@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress — environment isolation contract implemented**
+**Accepted / Complete**
 
 ## Objective
 
@@ -18,53 +18,62 @@ CP-43 prevents an operational class of error in which staging and production sil
 | staging | `wanderloom-api-staging` | `wanderloom-staging` | yes |
 | production | `wanderloom-api` | `wanderloom-production` | yes |
 
-The canonical code-level model lives in:
+Canonical code-level model:
 
 - `workers/api/src/deployment-environment.ts`
+- `workers/api/src/remote-wrangler-config.ts`
 
 ## Isolation rules
 
-1. Worker names must be unique across local/staging/production.
-2. Database names must be unique across local/staging/production.
+1. Worker names are unique across local/staging/production.
+2. Database names are unique across local/staging/production.
 3. Local is never classified as a remote deployment target.
 4. Staging and production are remote deployment targets.
-5. Once actual D1 IDs are provisioned, staging and production database IDs must both be present and must differ.
-6. No account-specific D1 IDs or secret values are committed by CP-43.
+5. Actual staging and production D1 IDs must both be valid UUIDs and must differ.
+6. No account-specific D1 IDs or secret values are committed.
+7. Generated remote Wrangler configuration is written only below `workers/api/.wrangler/` and is ignored by Git.
 
-## Current Wrangler state
+## Wrangler configuration boundary
 
-`workers/api/wrangler.jsonc` remains the existing local-development configuration and binds `DB` to `wanderloom-local`.
+`workers/api/wrangler.jsonc` remains the local-development configuration and binds `DB` to `wanderloom-local`.
 
-Remote named-environment bindings are intentionally not populated with fake IDs. Current Cloudflare Wrangler configuration requires D1 `database_id` for remote D1 bindings, so account-specific IDs will be introduced through the provisioning/configuration path rather than placeholder values in the active config.
+Remote account-specific configuration is generated locally with:
 
-## Cloudflare model alignment
-
-The intended deployment shape follows Wrangler named environments:
-
-```text
-wrangler deploy --env staging
-wrangler deploy --env production
+```bash
+WANDERLOOM_STAGING_D1_ID=<staging-uuid> \
+WANDERLOOM_PRODUCTION_D1_ID=<production-uuid> \
+pnpm --filter @wanderloom/api config:remote
 ```
 
-Bindings such as D1 databases are environment-specific and must be explicitly defined for each named environment. CP-45 will own provisioning/config material after CP-44 defines remote migration safety.
+Output:
 
-## Tests
+```text
+workers/api/.wrangler/remote/wrangler.remote.json
+```
 
-`workers/api/src/deployment-environment.test.ts` verifies:
+The generated file is deliberately outside source control. The generator fails if either ID is malformed or if staging and production use the same D1 database ID.
 
-- canonical names,
-- uniqueness of Worker and database names,
-- local/remote classification,
-- missing remote IDs are rejected when provisioned targets are validated,
-- equal staging/production database IDs are rejected.
+## Validation evidence
 
-## Remaining CP-43 work
+User-local validation on WSL:
 
-Before CP-43 can be marked Accepted:
+- `pnpm --filter @wanderloom/api typecheck`: PASS
+- `pnpm --filter @wanderloom/api test`: PASS
+  - 26 test files
+  - 82 tests
+- `pnpm --filter @wanderloom/api build`: PASS
+- Wrangler 4.132.0 deploy dry-run: PASS
+- local binding remained `env.DB (wanderloom-local)`
+- `config:remote` generated `.wrangler/remote/wrangler.remote.json`: PASS
+- generated `.wrangler` material is ignored by Git: PASS
+- final worktree diff after generated config: none
 
-1. run API typecheck/tests,
-2. confirm the environment model does not regress the M4 baseline,
-3. define the generated/account-specific Wrangler remote configuration boundary without committing real IDs,
-4. validate local Wrangler dry-run remains green.
+The first remote-config test implementation attempted to use Node `child_process` inside the Cloudflare Vitest runtime and was rejected. It was replaced with a pure TypeScript configuration builder and Workers-compatible direct unit tests. The final 26-file / 82-test regression suite is green.
 
-Actual remote D1 creation and production/staging IDs are not required to be committed and belong to later M5 provisioning/migration steps.
+## Acceptance result
+
+CP-43 establishes the environment identity and configuration-generation boundary required before any remote D1 mutation is allowed.
+
+Actual remote D1 creation, migration preview/application and production safeguards remain intentionally deferred to CP-44/CP-45.
+
+**CP-43: Accepted / Complete.**
