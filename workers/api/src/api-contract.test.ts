@@ -14,9 +14,11 @@ describe("CP-29 API error contract", () => {
     }
   });
 
-  it("marks only reconciliation-safe conflict outcomes retryable", () => {
+  it("marks only reconciliation-safe or provider-transient outcomes retryable", () => {
     expect(isRetryableApiError("version_conflict")).toBe(true);
     expect(isRetryableApiError("already_claimed")).toBe(true);
+    expect(isRetryableApiError("google_drive_provider_unavailable")).toBe(true);
+    expect(isRetryableApiError("google_drive_reauthorization_required")).toBe(false);
     expect(isRetryableApiError("invalid_request")).toBe(false);
     expect(isRetryableApiError("player_not_found")).toBe(false);
   });
