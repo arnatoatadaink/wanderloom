@@ -7,7 +7,8 @@ export type ArchiveAuthorizationAction =
 export function chooseArchiveAuthorizationAction(
   persistence: PersistenceViewState
 ): ArchiveAuthorizationAction {
-  return persistence.driveArchive === "connected"
-    ? "reuse_existing_authorization"
-    : "request_authorization";
+  return persistence.driveArchive === "not_connected" ||
+    persistence.driveArchive === "reauthorization_required"
+    ? "request_authorization"
+    : "reuse_existing_authorization";
 }
