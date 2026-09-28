@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress — structured logging/redaction contract implemented**
+**Accepted — structured logging/redaction contract validated**
 
 ## Objective
 
@@ -119,6 +119,8 @@ refreshTokenCiphertext=...
 ## Detail sanitization
 
 `sanitizeOperationalLogDetails()` is fail-closed at the field-name level: keys matching forbidden credential/secret/token patterns are removed before a structured record is created.
+
+The forbidden-key matcher is token-aware rather than raw-substring based so safe fields such as `statusCode` remain usable while `accessToken`, `clientSecret`, `authorizationCode`, and similar sensitive keys are rejected.
 
 This is a defense-in-depth mechanism, not permission to pass arbitrary request bodies into the logger. Callers should still construct small allowlisted detail objects.
 
@@ -239,9 +241,30 @@ CP-48 acceptance therefore validates the logging policy contract itself; it does
 - preservation of safe operational context,
 - structured record creation.
 
-## Acceptance evidence required
+## Acceptance evidence
 
-Before CP-48 can be Accepted:
+Validated on 2026-09-28 from `feat/cp-48-operational-error-logging-policy`:
+
+- API typecheck: PASS
+- API tests: **31 files / 99 tests PASS**
+- operational logging policy tests: **4 tests PASS**
+- API Wrangler local build/dry-run: PASS
+- upload size: 90.84 KiB / gzip 17.53 KiB
+- local D1 binding resolved as `wanderloom-local`
+- working tree: clean (`git status --short` produced no output)
+- no remote Worker deploy performed
+- no secret/provider credential values recorded in acceptance evidence
+
+The initial validation exposed two implementation defects and both were corrected before acceptance:
+
+1. `exactOptionalPropertyTypes` rejected explicitly passing `undefined` into optional classification fields; the implementation now constructs only defined optional properties.
+2. raw substring redaction incorrectly classified `statusCode` as sensitive because of `code`; the matcher now operates on normalized key tokens so sensitive compound keys remain forbidden while safe operational keys remain available.
+
+## Acceptance decision
+
+**Accepted.**
+
+All CP-48 acceptance requirements are satisfied:
 
 1. API typecheck PASS,
 2. all API tests PASS,
@@ -253,3 +276,5 @@ Before CP-48 can be Accepted:
 8. Google/Drive/D1 logging boundaries documented,
 9. current runtime-integration limitation explicitly documented,
 10. no real secret values appear in source, tests, logs, or acceptance evidence.
+
+Runtime-wide structured log emission remains a future integration concern rather than an acceptance blocker for this policy contract.
