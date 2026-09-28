@@ -86,6 +86,18 @@ Carried forward from the earlier gameplay backlog:
 - party/caravan mechanics when explicitly scheduled,
 - balance/retention iteration using the existing simulator and measurement baseline.
 
+A new accepted L0 product principle now constrains future group-play design:
+
+- **Solo Competitiveness = Low Operational Cost**.
+- solo remains competitive primarily through materially lower operating cost and sustainable efficiency rather than guaranteed equal gross reward,
+- larger formations may produce greater gross output but should incur increasing operational cost,
+- Party / Caravan / social / travel / duration cost mechanics should be organized beneath a broader future **Operational Cost System**,
+- exact formulas and production values remain L2/L3 work and are not fixed by this rebaseline.
+
+Authoritative design record:
+
+- `docs/adr/ADR-006_SOLO_COMPETITIVENESS_LOW_OPERATIONAL_COST_2026-09-28.md`
+
 No feature in this section is approved for the next milestone by this rebaseline.
 
 ### C. Archive Lifecycle
@@ -157,6 +169,9 @@ The following constraints remain authoritative unless a later ADR or milestone d
 - Operational logs must exclude Google credentials, refresh tokens, access tokens, raw ID tokens, and other secret material.
 - Guest gameplay must remain usable when optional Google/Drive persistence is unavailable.
 - Low-bandwidth-first remains a product constraint for future client/network expansion.
+- **Solo competitiveness must primarily emerge from low operational cost and sustainable net efficiency; larger formations may gain gross output but must not be universally dominant in both gross output and net efficiency across substantially all operating durations without an explicit superseding design decision.**
+
+The authoritative record for the final invariant is `docs/adr/ADR-006_SOLO_COMPETITIVENESS_LOW_OPERATIONAL_COST_2026-09-28.md`.
 
 ## WBS state after rebaseline
 
