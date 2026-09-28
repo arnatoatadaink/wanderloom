@@ -12,7 +12,7 @@ export interface RemoteWranglerDatabaseBinding {
   readonly binding: "DB";
   readonly database_name: string;
   readonly database_id: string;
-  readonly migrations_dir: "migrations";
+  readonly migrations_dir: "../../migrations";
 }
 
 export interface RemoteWranglerEnvironment {
@@ -25,7 +25,7 @@ export interface RemoteWranglerEnvironment {
 
 export interface RemoteWranglerConfig {
   readonly $schema: string;
-  readonly main: "src/index.ts";
+  readonly main: "../../src/index.ts";
   readonly compatibility_date: "2026-09-18";
   readonly env: {
     readonly staging: RemoteWranglerEnvironment;
@@ -62,8 +62,8 @@ export function buildRemoteWranglerConfig(
   }
 
   return {
-    $schema: "../../node_modules/wrangler/config-schema.json",
-    main: "src/index.ts",
+    $schema: "../../../../node_modules/wrangler/config-schema.json",
+    main: "../../src/index.ts",
     compatibility_date: "2026-09-18",
     env: {
       staging: {
@@ -73,7 +73,7 @@ export function buildRemoteWranglerConfig(
             binding: "DB",
             database_name: DEPLOYMENT_ENVIRONMENTS.staging.databaseName,
             database_id: stagingDatabaseId,
-            migrations_dir: "migrations"
+            migrations_dir: "../../migrations"
           }
         ],
         secrets: requiredSecrets()
@@ -85,7 +85,7 @@ export function buildRemoteWranglerConfig(
             binding: "DB",
             database_name: DEPLOYMENT_ENVIRONMENTS.production.databaseName,
             database_id: productionDatabaseId,
-            migrations_dir: "migrations"
+            migrations_dir: "../../migrations"
           }
         ],
         secrets: requiredSecrets()

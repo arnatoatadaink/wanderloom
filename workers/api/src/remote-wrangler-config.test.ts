@@ -18,12 +18,16 @@ describe("CP-43 remote Wrangler config generation", () => {
       productionDatabaseId: productionId
     });
 
+    expect(config.main).toBe("../../src/index.ts");
+    expect(config.$schema).toBe("../../../../node_modules/wrangler/config-schema.json");
+
     expect(config.env.staging.name).toBe("wanderloom-api-staging");
     expect(config.env.staging.d1_databases[0]).toMatchObject({
       binding: "DB",
       database_name: "wanderloom-staging",
       database_id: stagingId
     });
+    expect(config.env.staging.d1_databases[0]?.migrations_dir).toBe("../../migrations");
     expect(config.env.staging.secrets.required).toEqual(requiredSecrets);
 
     expect(config.env.production.name).toBe("wanderloom-api");
@@ -32,6 +36,7 @@ describe("CP-43 remote Wrangler config generation", () => {
       database_name: "wanderloom-production",
       database_id: productionId
     });
+    expect(config.env.production.d1_databases[0]?.migrations_dir).toBe("../../migrations");
     expect(config.env.production.secrets.required).toEqual(requiredSecrets);
   });
 

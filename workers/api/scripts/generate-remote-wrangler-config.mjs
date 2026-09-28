@@ -34,7 +34,7 @@ function environmentConfig(name, databaseName, databaseId) {
         binding: "DB",
         database_name: databaseName,
         database_id: databaseId,
-        migrations_dir: "migrations"
+        migrations_dir: "../../migrations"
       }
     ]
   };
@@ -49,8 +49,8 @@ function environmentConfig(name, databaseName, databaseId) {
 }
 
 const config = {
-  $schema: "../../node_modules/wrangler/config-schema.json",
-  main: "src/index.ts",
+  $schema: "../../../../node_modules/wrangler/config-schema.json",
+  main: "../../src/index.ts",
   compatibility_date: "2026-09-18",
   env: {
     staging: environmentConfig(
