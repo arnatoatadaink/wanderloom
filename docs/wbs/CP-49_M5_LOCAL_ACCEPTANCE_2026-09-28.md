@@ -6,6 +6,11 @@
 - 判定単位: CLI回帰 + GUI回帰 + 永続化確認 + リポジトリ状態
 - 想定ブランチ: `m5`
 - 最終タグ候補: `v0.0.5`
+- 検収したソースSHA: `d30cd8fbae76776fd05bcdeb56ac13e8e344411f`
+- ローカル／ソース検収: **PASS**（2026-09-28）
+- リリース統合・タグ固定・実リモート操作: **未実施**
+
+実測結果とリモート契約の確認内容は「18. 実施証跡」に記録する。
 
 ---
 
@@ -44,10 +49,10 @@ git log -1 --oneline
 
 記録:
 
-- Branch:
-- HEAD:
-- Working tree:
-- 判定: PASS / FAIL
+- Branch: `m5`
+- HEAD: 検収したソース `d30cd8fbae76776fd05bcdeb56ac13e8e344411f`
+- Working tree: 検収開始時はclean。最終レポートcommit後に再確認する。
+- 判定: PASS
 
 ---
 
@@ -444,26 +449,26 @@ GUI一周後に確認する。
 
 | 項目 | 判定 |
 |---|---|
-| Typecheck | PASS / FAIL |
-| 全テスト | PASS / FAIL |
-| Worker dry-run / build | PASS / FAIL |
-| `git diff --check` | PASS / FAIL |
-| GUI初期表示 | PASS / FAIL |
-| Exploration start | PASS / FAIL |
-| Exploration result | PASS / FAIL |
-| Claim | PASS / FAIL |
-| 二重Claim防止 | PASS / FAIL |
-| Progression | PASS / FAIL |
-| Inventory | PASS / FAIL |
-| Equipment | PASS / FAIL / N/A |
-| Persistence | PASS / FAIL |
-| Google / Archive回帰 | PASS / FAIL / N/A |
-| Mobile表示 | PASS / FAIL |
-| Console / Network | PASS / FAIL |
+| Typecheck | PASS（3 workspace） |
+| 全テスト | PASS（64 files / 212 tests） |
+| Worker dry-run / build | PASS（local、staging、production、staging bootstrap、Web build） |
+| `git diff --check` | PASS |
+| GUI初期表示 | PASS（実API） |
+| Exploration start | PASS（実API） |
+| Exploration result | PASS（実APIの完了表示、fixtureの結果画面） |
+| Claim | PASS（実API／D1に報酬確定） |
+| 二重Claim防止 | PASS（再送409 `already_claimed`） |
+| Progression | PASS（5 G / 10 XP、reload後も保持） |
+| Inventory | PASS（獲得Charm、reload後も保持） |
+| Equipment | PASS（装備・reload後の保持） |
+| Persistence | PASS（探索中・Claim後・装備後のreload） |
+| Google / Archive回帰 | PASS（fixture 6件、ゲスト表示。実OAuth/Drive接続は対象外） |
+| Mobile表示 | PASS（390×844、横はみ出しなし） |
+| Console / Network | PASS（予期しないpage error/API 4xx/5xxなし。GIS初期化警告は記録） |
 
 ## 最終判定
 
-- [ ] M5 Accepted
+- [x] M5 Accepted（ローカル／ソース契約）
 - [ ] Conditional Accepted
 - [ ] Rejected
 
@@ -632,45 +637,82 @@ git tag --points-at HEAD
 
 ## CLI
 
-- Typecheck:
-- Test Files:
-- Tests:
-- Build / Wrangler:
-- Diff check:
+- Typecheck: PASS（3 workspace）
+- Test Files: 64 PASS
+- Tests: 212 PASS
+- Build / Wrangler: local build、staging/production/bootstrap dry-run PASS
+- Diff check: PASS
 
 ## GUI
 
-- Initial display:
-- Exploration:
-- Result:
-- Claim:
-- Double-claim prevention:
-- Progression:
-- Inventory:
-- Equipment:
-- Persistence:
-- Google / Archive:
-- Mobile:
-- Console:
-- Network:
+- Initial display: PASS（実API）
+- Exploration: PASS（実API、探索中reload）
+- Result: PASS（実APIの完了表示、fixture結果画面）
+- Claim: PASS（実API／D1）
+- Double-claim prevention: PASS（409 `already_claimed`）
+- Progression: PASS（5 G / 10 XP）
+- Inventory: PASS（Charm 1個）
+- Equipment: PASS（装備とreload後の保持）
+- Persistence: PASS（探索・Claim・装備）
+- Google / Archive: fixture回帰PASS、実OAuth/Driveは対象外
+- Mobile: PASS（390×844）
+- Console: 予期しないpage error 0件。Google GISの重複初期化警告あり（実OAuth接続は未検証）
+- Network: 予期しないAPI 4xx/5xx 0件
 
 ## Git
 
-- M5 branch HEAD:
-- Main HEAD:
-- Tag:
-- Push:
+- M5 source HEAD: `d30cd8fbae76776fd05bcdeb56ac13e8e344411f`
+- Main HEAD: `45c8d5b82cb93c2431d7946bfb5fa9a61264719d`（未統合）
+- Tag: `v0.0.5` 未作成
+- Push: 未実施
 
 ## CP-49 最終判定
 
 ```text
-CP-49: PASS / FAIL
-M5: Accepted / Conditional Accepted / Rejected
-v0.0.5: Fixed / Not Fixed
+CP-49: PASS（ローカル／ソース検収）
+M5: Accepted（ソース契約）
+v0.0.5: Not Fixed
 ```
 
 ## 備考
 
 ```text
-
+実リモート操作とリリース統合は未実施。詳細は第18節。
 ```
+
+---
+
+# 18. 実施証跡 — 2026-09-28
+
+## 検収対象とCLI
+
+- ソースSHA: `d30cd8fbae76776fd05bcdeb56ac13e8e344411f`（リモート設定パス修正を含む）
+- `pnpm -r typecheck`: 3 workspace PASS。
+- `pnpm -r test --configLoader runner`: 64 files / 212 tests PASS（game-core 19/65、Web 14/48、API 31/99）。`runner` は、このWSL環境でシンボリックリンク先の `node_modules/.vite-temp` が読み取り専用だったため使用した。
+- `pnpm -r build`: game-core、Web production build、API local Wrangler dry-run PASS。Web bundleに unresolved import なし。
+- 生成済みremote config: staging/productionのWorker名・D1名は別、D1 IDはUUID形式かつ別、両環境に要求するWorker secret名3件を確認。IDやsecret値は記録しない。生成設定はGit管理対象外。
+- remote configを使った `wrangler deploy --dry-run`: staging、production、staging bootstrapの3対象すべてPASS。実デプロイなし。
+- 同じremote configによる `wrangler d1 migrations list wanderloom-staging --local --env staging`: 0001～0006を検出。`--remote`、`apply` は実行していない。既存のローカルDBへの `migrations apply DB --local` は「No migrations to apply」。
+- `git diff --check`: PASS。追跡対象の `.dev.vars`、`.env.local`、生成 `.wrangler` 設定なし。
+
+## GUI・永続化
+
+- Playwright Chromium既存6件 PASS。Drive同期失敗／再試行、再認可、popup中断、Claim確定、装備、reloadをAPI fixture境界で確認。
+- 別途、実ローカルWorker/D1とWebを接続し、390×844のChromiumでゲストbootstrap、2 zone・2 duration表示、探索開始、探索中reload、5分後のClaimを実行。Claim後のローカルD1には `success` と5 Gold・10 EXP・Charm 1個が確定していた。
+- 同じClaimの再送は HTTP 409 `already_claimed`。Claim後の画面再読み込みで報酬値とCharmを保持し、Claimボタンは再表示されなかった。Charm装備後の再読み込みでも `Equipped` を保持。
+- 390×844と1280×800で主要CTAとInventoryを確認し、横はみ出しなし。画面のpage errorと予期しないAPI 4xx/5xxは0件。ViteログにはGoogle GISの重複初期化警告が出た。Googleアカウント／Drive実接続は行っていないため、この警告の実接続への影響は未判定。
+- 一時的な検収スクリプトはClaim後の見出しを大文字の `Success` と仮定して待機し、タイムアウトした。実データの結果値は小文字の `success`。D1確定、reload後のUI、Playwright既存fixtureの結果画面でClaim成功を確認した。
+
+## CP-43～48の結合契約
+
+- CP-43/45: environment別のWorker/D1分離、secret名3件、公開Web変数の区別、生成remote configとbootstrap configを確認。実remote dry-runで当初 `src/index.ts` の相対パス不整合を検出した。generatorとTypeScriptの構成モデルで、生成ファイル位置からの `main`・schema・`migrations_dir` パスを修正し、dry-runとローカル移行一覧で再検証した。
+- CP-44: migrationコマンドは明示的なtarget、`--remote`、target固有の確認文を要求する。対象未指定・確認文不一致は単体テストで拒否を確認。実remote migrationのpreview/applyは行っていない。
+- CP-46: stagingを先に確認し、SHA・tag・migration状態・smoke結果を記録する手順、Worker rollback、D1 schemaがrollbackされない制限をrunbookとテストで確認。
+- CP-47: health、guest bootstrap、state、inventory、zones、exploration start/claim、migration stateのrelease-blocking判定をコードとテストで確認。実デプロイ後のsmokeは未実施。
+- CP-48: event分類、request ID、機密キーの除外規則、ログのテストを確認。実運用ログの採取は未実施。
+
+## 判定と運用境界
+
+**CP-49ローカル／ソース検収: PASS。M5ソース契約: Accepted。**
+
+この判定は実リモート資源の準備、staging/production D1移行、Worker/Webデプロイ、rollback、デプロイ後smokeの成功を主張しない。`m5` → `main` 統合、`v0.0.5` tag、pushも別途実施するリリース操作であり、この記録時点では未実施。
