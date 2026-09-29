@@ -19,6 +19,8 @@ For the first L3 model:
 - Cost reduction applies to the operational-cost subtotal and moves the cost toward zero.
 - Travel/content-specific fees remain additive and separate from formation overhead.
 - The first model deliberately avoids Social Stress, complex logistics inventories, multiple currencies, durability, and nonlinear formulas.
+- All members inside the same initial formation class share the same formation cost: Party 2–4 are equal-cost, and Caravan 5–12 are equal-cost.
+- The calculation boundary must remain parameterized so future models can replace the simple lookup/multiplication rule with a richer formula without changing the surrounding exploration contract.
 
 The purpose is to obtain a transparent baseline that can be simulated and later replaced by richer rules if needed.
 
@@ -46,9 +48,7 @@ Initial duration buckets:
 | Medium | 2 hours | 3 |
 | Long | 8 hours | 8 |
 
-The multiplier is intentionally not equal to elapsed-time ratio. The first model gives larger/longer operations increasing sustain pressure without making the curve overly aggressive.
-
-These values are simulation defaults and may later be aligned with actual exploration duration IDs.
+The multiplier is intentionally not equal to elapsed-time ratio. These values are simulation defaults only; gameplay tempo remains a later design decision and may be aligned with actual exploration duration IDs.
 
 ## Base formation cost
 
@@ -82,30 +82,69 @@ This is the first reference matrix for balance simulations.
 
 The matrix models **formation operating overhead only**. A destination may still charge Travel Cost to Solo, Party, or Caravan separately.
 
-## Participant-count refinement
+## Participant-count simplification
 
-The first model does not charge each additional member individually.
-
-All formations inside a class initially share the class base cost:
+The initial model intentionally does not charge each additional participant individually.
 
 ```text
 Party(2) == Party(3) == Party(4)
-Caravan(5) == ... == Caravan(12)
+Caravan(5) == Caravan(6) == ... == Caravan(12)
 ```
 
-This is intentional simplification.
+In particular, a 5-member Caravan and a 12-member Caravan have the same formation-operating cost in this first model.
 
-If simulation shows strong incentives to always choose the maximum size inside a class, the first refinement should be a per-member surcharge or piecewise size curve rather than changing the L0 principle.
+This is an explicit simplicity choice rather than an assumption that real operating cost is independent of size. If later simulation or gameplay requires finer granularity, participant count becomes one of the inputs to a replacement cost function.
 
-## Cost calculation
+## Parameterized calculation boundary
 
-Initial calculation:
+Even though the first model is a simple class lookup, implementation should expose the calculation as a parameter-driven function rather than embedding the current table directly throughout gameplay code.
+
+Conceptual input:
+
+```text
+OperationalCostInput {
+  formationClass,
+  participantCount,
+  durationClass,
+  durationValue,
+  formationBaseCost,
+  durationMultiplier,
+  coordinationParameter,
+  logisticsParameter,
+  travelCost,
+  explicitContentCost,
+  operationalCostReduction,
+  sourceSpecificReductions,
+  otherModifiers
+}
+```
+
+Not every field affects the initial formula. Unused future-facing inputs may remain absent from the first implementation, but the calculation boundary must permit them to be introduced without redefining Operational Cost itself.
+
+The initial strategy can be expressed as:
 
 ```text
 formationOperationalCost =
   baseFormationCost(formationClass)
   * durationMultiplier(durationClass)
 ```
+
+A future strategy may instead evaluate a function such as:
+
+```text
+formationOperationalCost = f(
+  formationClass,
+  participantCount,
+  duration,
+  coordination,
+  logistics,
+  route,
+  formationState,
+  modifiers
+)
+```
+
+The exact future formula is intentionally not fixed. The requirement is that balance parameters remain data/configuration inputs to one calculation boundary rather than becoming scattered constants.
 
 Travel/content cost remains separate:
 
@@ -178,7 +217,7 @@ Thus `Solo operational formation cost = 0` does not imply `every Solo action is 
 
 ## Reward boundary
 
-This ADR does not yet fix formation reward multipliers.
+This ADR does not fix formation reward multipliers.
 
 For simulation, reward calculation must remain separate from cost calculation:
 
@@ -186,7 +225,7 @@ For simulation, reward calculation must remain separate from cost calculation:
 NetGoldEquivalent = GrossGoldEquivalent - FinalGoldRequirement
 ```
 
-The next L3 balance step should define initial gross-reward multipliers for Solo / Party / Caravan and Short / Medium / Long, then compare:
+The next L3 balance step defines initial gross-reward multipliers for Solo / Party / Caravan and Short / Medium / Long, then compares:
 
 - gross reward,
 - net reward,
@@ -229,12 +268,12 @@ Changing these values later does not supersede ADR-006 or ADR-007 provided their
 
 ## Result
 
-L3 now has a minimal executable economic model:
+L3 now has a minimal executable and extensible economic model:
 
 ```text
-Formation Class
-      +
-Duration Class
+Formation/Duration Parameters
+      ↓
+Operational Cost Calculation Strategy
       ↓
 Formation Operational Cost (Gold)
       ↓
