@@ -1,18 +1,20 @@
-# ADR-012 — Initial Duration Rarity Multiplier Model — 2026-09-29
+# ADR-012 — Duration Rarity Chi-Square Model — 2026-09-29
 
 ## Status
 
-**Accepted as initial L3 simulation baseline / tunable rarity values**
+**Accepted as revised L3 simulation baseline / tunable rarity-distribution model**
 
-This ADR extends ADR-011 by defining the first duration-dependent rarity multiplier table for the seven Wanderloom rarity tiers.
+This ADR supersedes the earlier fixed duration-rarity multiplier table in this same document.
+
+It extends ADR-011 by defining a smoother duration-dependent rarity model based on a normalized chi-square distribution rather than direct per-tier multipliers such as `Phantasm x4.00`.
 
 It does not select M6 scope, create CP-50+, or freeze production drop rates.
 
 ## Goal
 
-Make operation duration affect **reward quality opportunity** rather than only visible Gold-equivalent output.
+Duration should affect **reward quality opportunity** while preserving a smooth rarity tail.
 
-The intended shape is:
+The intended shape remains:
 
 ```text
 Visible Gold efficiency:
@@ -22,11 +24,11 @@ Rarity opportunity:
 Short <= Medium <= Long
 ```
 
-Long operations should therefore trade some visible economic/time efficiency for a meaningfully better chance of upper-rarity rewards.
+Long operations should improve the probability of upper-rarity outcomes, but should not create abrupt tier-specific jumps.
 
 ## Rarity tiers
 
-The existing seven-tier order remains authoritative:
+The seven-tier order remains:
 
 ```text
 Common
@@ -38,111 +40,173 @@ Mythic
 Phantasm
 ```
 
-## Initial duration rarity multipliers
+## Distribution model
 
-The first simulation baseline uses the following multipliers against each zone's base rarity weights:
+Use a normalized chi-square latent quality variable:
 
-| Rarity | Short | Medium | Long |
+```text
+X ~ ChiSquare(nu)
+Q = X / nu
+```
+
+`Q` has mean 1 for every duration class. Changing `nu` changes the spread/skew of the distribution rather than directly multiplying a named rarity tier.
+
+Initial degrees of freedom:
+
+| Duration | nu | Role |
+|---|---:|---|
+| Short | 8 | tighter distribution; fewer extreme upper-tail outcomes |
+| Medium | 6 | neutral reference |
+| Long | 5 | moderately heavier right tail; improved high-rarity opportunity |
+
+The difference is intentionally small. Long should improve the tail, not radically reshape the economy.
+
+## Rarity thresholds
+
+Rarity is selected by comparing `Q` against ordered rarity thresholds:
+
+```text
+qCommonMax
+qUncommonMax
+qRareMax
+qEpicMax
+qLegendMax
+qMythicMax
+```
+
+Conceptually:
+
+```text
+Q < qCommonMax                    -> Common
+Q < qUncommonMax                  -> Uncommon
+Q < qRareMax                      -> Rare
+Q < qEpicMax                      -> Epic
+Q < qLegendMax                    -> Legend
+Q < qMythicMax                    -> Mythic
+otherwise                         -> Phantasm
+```
+
+Thresholds are zone/balance parameters. They must not be embedded as magic constants in the resolver.
+
+## Medium calibration reference
+
+For simulation only, a representative Medium distribution may be calibrated to:
+
+| Rarity | Medium reference probability |
+|---|---:|
+| Common | 55.0% |
+| Uncommon | 25.0% |
+| Rare | 12.0% |
+| Epic | 5.0% |
+| Legend | 2.0% |
+| Mythic | 0.8% |
+| Phantasm | 0.2% |
+
+Using `nu = 6` for Medium and choosing thresholds to reproduce that reference distribution gives approximate normalized `Q` boundaries:
+
+```text
+Common / Uncommon : 0.9609
+Uncommon / Rare   : 1.4263
+Rare / Epic       : 1.8806
+Epic / Legend     : 2.3279
+Legend / Mythic   : 2.8020
+Mythic / Phantasm : 3.4652
+```
+
+These are simulation calibration values, not production commitments.
+
+## Example resulting distributions
+
+Using the same thresholds for each duration class gives approximately:
+
+| Rarity | Short nu=8 | Medium nu=6 | Long nu=5 |
 |---|---:|---:|---:|
-| Common | 1.20 | 1.00 | 0.65 |
-| Uncommon | 1.10 | 1.00 | 0.85 |
-| Rare | 1.00 | 1.00 | 1.20 |
-| Epic | 0.80 | 1.00 | 1.60 |
-| Legend | 0.50 | 1.00 | 2.20 |
-| Mythic | 0.25 | 1.00 | 3.00 |
-| Phantasm | 0.10 | 1.00 | 4.00 |
+| Common | 53.54% | 55.00% | 55.98% |
+| Uncommon | 28.51% | 25.00% | 22.92% |
+| Rare | 12.12% | 12.00% | 11.70% |
+| Epic | 4.13% | 5.00% | 5.40% |
+| Legend | 1.28% | 2.00% | 2.45% |
+| Mythic | 0.37% | 0.80% | 1.16% |
+| Phantasm | 0.05% | 0.20% | 0.39% |
 
-These are **weight multipliers**, not direct probabilities.
+This is the intended qualitative behavior:
 
-They are intentionally asymmetric:
+- Short suppresses the extreme upper tail.
+- Medium is the neutral reference.
+- Long improves Epic+ and especially Legend/Mythic/Phantasm opportunity.
+- Phantasm rises gradually in absolute probability rather than receiving a direct `x4` multiplier.
 
-- Short biases toward Common / Uncommon and suppresses upper rarities.
-- Medium is the neutral reference profile.
-- Long suppresses lower rarities and amplifies upper rarities.
+The exact probability ratios are not acceptance requirements; the smooth-tail shape is.
 
-## Calculation model
+## Important interpretation
 
-For a zone with base rarity weights:
+A lower `nu` in this normalized model creates a more right-skewed distribution.
 
-```text
-zoneBaseWeights[rarity]
-```
+That does **not** mean every upper tier rises equally. Probability mass is redistributed continuously according to the common thresholds.
 
-the duration-adjusted raw weight is:
-
-```text
-adjustedWeight[rarity] =
-  zoneBaseWeights[rarity]
-  * durationRarityMultiplier[durationClass][rarity]
-```
-
-The resulting probability distribution is then normalized across all reachable tiers:
+This is preferable to independent rarity multipliers because adjacent tiers remain mathematically related and there is no arbitrary discontinuity such as:
 
 ```text
-probability[rarity] =
-  adjustedWeight[rarity]
-  / sum(adjustedWeight[all rarities])
+Mythic x3
+Phantasm x4
 ```
 
-## Reachability invariant
+## Zone reachability
 
-Duration multiplier does **not** automatically unlock a rarity that the zone explicitly disables.
+Zone authority remains explicit.
 
-If:
+A zone may still mark upper rarities unreachable. Duration must not silently override that decision.
+
+Conceptually:
 
 ```text
-zoneBaseWeights[Mythic] = 0
+if rarity not reachable in zone:
+    probability = 0
 ```
 
-then:
+The remaining reachable probabilities are then renormalized.
+
+Therefore Long does not automatically unlock Mythic or Phantasm.
+
+If Long-specific unlocking is desired later, it must be represented by a separate reachability rule.
+
+## Parameterized calculation boundary
+
+The implementation should accept parameters equivalent to:
 
 ```text
-adjustedWeight[Mythic] = 0
+RarityDistributionInput {
+  zoneId
+  durationClass
+  degreesOfFreedom
+  rarityThresholds
+  reachabilityRules
+  otherModifiers
+}
 ```
 
-for Short, Medium, and Long.
-
-This preserves the existing zone-authority model from CP-22.
-
-If future content wants Long duration to unlock an otherwise unreachable tier, that must be represented as an explicit separate reachability rule rather than by multiplying zero.
-
-## Why Medium is the neutral reference
-
-Medium uses `1.00` across every rarity tier.
-
-This gives balance work a stable comparison point:
+Initial calculation:
 
 ```text
-Medium distribution == zone base distribution
+X ~ ChiSquare(degreesOfFreedom[durationClass])
+Q = X / degreesOfFreedom[durationClass]
+rarity = classify(Q, rarityThresholds)
 ```
 
-Short and Long therefore express only the intended duration bias rather than redefining the zone itself.
+Future tuning may adjust:
 
-## Expected qualitative effect
+- degrees of freedom by duration,
+- thresholds by zone,
+- thresholds by difficulty,
+- reachability,
+- equipment/progression modifiers,
+- additional distribution parameters if chi-square alone becomes insufficient.
 
-Without fixing any production zone distribution, the multipliers guarantee the following directional bias whenever the affected rarity has non-zero base weight:
+The initial implementation should keep these values external to the resolver.
 
-### Short
+## Simulator metrics
 
-- more lower-tier concentration,
-- weaker Legend+ opportunity,
-- strongest fit for frequent visible-economy farming.
-
-### Medium
-
-- neutral zone rarity profile,
-- middle ground between economic efficiency and rarity hunting.
-
-### Long
-
-- lower Common/Uncommon share,
-- increased Rare/Epic share,
-- materially increased Legend/Mythic/Phantasm opportunity where those tiers are reachable,
-- strongest fit for long unattended/high-quality-reward attempts.
-
-## Rarity opportunity metrics
-
-The balance simulator should add at least:
+The balance simulator should report at least:
 
 ```text
 probabilityByRarity[]
@@ -154,7 +218,7 @@ phantasmProbability
 expectedRarityScore
 ```
 
-Initial expected-rarity scoring may use simple ordinal simulation weights:
+Using diagnostic ordinal scores:
 
 ```text
 Common   = 0
@@ -166,126 +230,84 @@ Mythic   = 5
 Phantasm = 6
 ```
 
-Then:
-
-```text
-expectedRarityScore =
-  sum(probability[rarity] * rarityScore[rarity])
-```
-
-These scores are diagnostic only. They are not item prices or Gold-equivalent valuations.
+Gold valuation remains separate.
 
 ## Acceptance criteria
 
-For an identical zone/base distribution with at least one reachable upper rarity, the initial model should satisfy:
+For representative zones with reachable upper rarities, the model should normally satisfy:
 
 ```text
-expectedRarityScore(Short)
-  <= expectedRarityScore(Medium)
-  <= expectedRarityScore(Long)
+ExpectedRarityScore(Short)
+  <= ExpectedRarityScore(Medium)
+  <= ExpectedRarityScore(Long)
 ```
 
-and normally:
+and the same monotonic direction for important upper-tail metrics such as:
 
 ```text
-rareOrBetterProbability(Short)
-  <= rareOrBetterProbability(Medium)
-  <= rareOrBetterProbability(Long)
+Epic+
+Legend+
+Mythic+
+Phantasm
 ```
 
-with the same monotonic target for Epic+, Legend+, and other reachable upper-tier thresholds.
+Additional constraints:
 
-Long must not gain its value merely by generating proportionally more total draws. The simulator must report both:
+1. No individual upper tier receives an independent duration multiplier in the baseline model.
+2. Duration effects should remain smooth under small changes to `nu`.
+3. Long must not create an order-of-magnitude increase in Phantasm probability under ordinary tuning.
+4. Zone reachability remains authoritative.
+5. Drop quantity and per-draw rarity quality remain separately measurable.
 
-- number of drop opportunities,
-- quality distribution per opportunity.
+## Formation independence
 
-This keeps quantity and rarity-quality effects separately inspectable.
+The initial rarity-quality distribution depends on duration, not formation class.
 
-## Formation independence in the initial model
-
-The first rarity multiplier table depends on duration, not Solo/Party/Caravan class.
-
-Thus, under otherwise identical zone and duration rules:
+For otherwise identical zone rules:
 
 ```text
-rarityQualityBias(Solo, Long)
-== rarityQualityBias(Party, Long)
-== rarityQualityBias(Caravan, Long)
+rarityDistribution(Solo, Long)
+== rarityDistribution(Party, Long)
+== rarityDistribution(Caravan, Long)
 ```
 
-Formation may still affect total output/drop count through separate rules.
-
-A future design may introduce formation-specific rarity effects, but that is not part of this baseline.
-
-## Parameterized extension boundary
-
-The implementation should consume the table through parameters rather than embedding constants in reward resolution.
-
-Conceptually:
-
-```text
-RarityResolutionInput {
-  zoneBaseWeights,
-  durationClass,
-  durationRarityMultipliers,
-  reachabilityRules,
-  otherModifiers
-}
-```
-
-Initial strategy:
-
-```text
-adjustedWeights =
-  zoneBaseWeights * durationRarityMultipliers[durationClass]
-```
-
-Future strategy may become:
-
-```text
-adjustedWeights = h(
-  zone,
-  duration,
-  risk,
-  progression,
-  equipment,
-  formation,
-  modifiers
-)
-```
-
-without changing the L0/L2 principles.
+Formation may affect total drop count through separate rules.
 
 ## Deferred decisions
 
 This ADR does not decide:
 
-- production zone base rarity weights,
-- exact item counts per duration,
+- production zone rarity thresholds,
+- production Medium base distribution,
+- final Short/Medium/Long duration values,
 - whether Long explicitly unlocks upper tiers,
 - pity/guarantee mechanics,
-- rarity effects from equipment or progression,
-- rarity effects from Party/Caravan composition,
+- exact drop counts,
+- item-specific rarity tables,
 - Gold-equivalent valuation of rare drops,
-- final real-time Short/Medium/Long durations.
+- rarity effects from formation/equipment/progression,
+- whether a different statistical family replaces chi-square after simulation testing.
 
 ## Result
 
-The initial duration-value model is now two-dimensional:
+The revised duration-quality model is:
 
 ```text
 Duration
   |
-  +--> Visible Economic Output / Gold efficiency
-  |
-  +--> Rarity Quality Bias
-           |
-           +-- Short  -> lower-tier weighted
-           +-- Medium -> neutral zone profile
-           +-- Long   -> upper-tier weighted
+  +--> nu (degrees of freedom)
+          |
+          v
+   Chi-square draw X
+          |
+          v
+      Q = X / nu
+          |
+          v
+  Shared rarity thresholds
+          |
+          v
+ Common ... Phantasm
 ```
 
-This gives Long operations a distinct strategic purpose without requiring them to beat Short operations on visible Gold-per-hour efficiency.
-
-The next balance action is to test these multipliers against one or more representative zone base distributions and inspect the resulting normalized probabilities and expected-rarity metrics before implementation is selected for a milestone.
+This replaces the earlier direct rarity-multiplier table and gives Long operations a smoother, tunable upper-tail advantage.
