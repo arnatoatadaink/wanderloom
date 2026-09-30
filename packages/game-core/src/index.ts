@@ -34,4 +34,6 @@ export * from "./domain/duration-rarity-model";
 
 export * from "./domain/formation-economy-model";
 
+export * from "./domain/l3-balance-report";
+
 export * from "./domain/account-linking";
