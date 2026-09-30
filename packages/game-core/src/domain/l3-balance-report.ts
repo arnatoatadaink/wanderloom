@@ -75,7 +75,9 @@ function rarityForDuration(
   const probabilityByRarity = buildDurationRarityDistribution({
     degreesOfFreedom: dfForDuration(duration, input.rarityDegreesOfFreedom),
     thresholds: input.rarityThresholds ?? INITIAL_MEDIUM_T_THRESHOLDS,
-    reachableRarities: input.reachableRarities
+    ...(input.reachableRarities === undefined
+      ? {}
+      : { reachableRarities: input.reachableRarities })
   });
   return calculateRarityOpportunityMetrics(probabilityByRarity);
 }
