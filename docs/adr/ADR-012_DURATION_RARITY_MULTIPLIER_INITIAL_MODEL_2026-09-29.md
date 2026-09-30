@@ -1,18 +1,18 @@
-# ADR-012 — Duration Rarity Chi-Square Model — 2026-09-29
+# ADR-012 — Duration Rarity Student's t Model — 2026-09-29
 
 ## Status
 
 **Accepted as revised L3 simulation baseline / tunable rarity-distribution model**
 
-This ADR supersedes the earlier fixed duration-rarity multiplier table in this same document.
+This ADR supersedes the earlier fixed duration-rarity multiplier model and the later chi-square variant in this same document.
 
-It extends ADR-011 by defining a smoother duration-dependent rarity model based on a normalized chi-square distribution rather than direct per-tier multipliers such as `Phantasm x4.00`.
+It extends ADR-011 by defining a smoother duration-dependent rarity model based on a one-sided Student's t latent quality variable.
 
 It does not select M6 scope, create CP-50+, or freeze production drop rates.
 
 ## Goal
 
-Duration should affect **reward quality opportunity** while preserving a smooth rarity tail.
+Duration should affect **reward quality opportunity** while keeping the lower-rarity distribution comparatively stable.
 
 The intended shape remains:
 
@@ -24,7 +24,7 @@ Rarity opportunity:
 Short <= Medium <= Long
 ```
 
-Long operations should improve the probability of upper-rarity outcomes, but should not create abrupt tier-specific jumps.
+Long operations should improve upper-tail outcomes without materially reshaping Common/Uncommon/Rare frequencies under ordinary tuning.
 
 ## Rarity tiers
 
@@ -42,28 +42,45 @@ Phantasm
 
 ## Distribution model
 
-Use a normalized chi-square latent quality variable:
+Use a one-sided Student's t latent quality variable:
 
 ```text
-X ~ ChiSquare(nu)
-Q = X / nu
+T ~ StudentT(nu)
+Q = T
 ```
 
-`Q` has mean 1 for every duration class. Changing `nu` changes the spread/skew of the distribution rather than directly multiplying a named rarity tier.
+The same ordered rarity thresholds are applied to `Q` for every duration class.
+
+The Student's t family is symmetric around zero. In this model, only the upper side represents progressively rarer outcomes; negative and ordinary central values naturally fall into lower rarity buckets.
+
+The baseline does **not** use `abs(T)`, because folding both tails would approximately double extreme-tail opportunity and make tuning less intuitive.
 
 Initial degrees of freedom:
 
 | Duration | nu | Role |
 |---|---:|---|
-| Short | 8 | tighter distribution; fewer extreme upper-tail outcomes |
+| Short | 8 | thinner tail; fewer extreme upper-rarity outcomes |
 | Medium | 6 | neutral reference |
-| Long | 5 | moderately heavier right tail; improved high-rarity opportunity |
+| Long | 5 | moderately heavier tail; improved upper-rarity opportunity |
 
-The difference is intentionally small. Long should improve the tail, not radically reshape the economy.
+As `nu` decreases, the Student's t distribution develops heavier tails while preserving a stable center. This is the primary reason for preferring it over the prior chi-square model for Wanderloom's rarity-duration relationship.
+
+## Why Student's t replaces chi-square
+
+The normalized chi-square model changed the lower/middle part of the distribution more noticeably when `nu` changed because it is positively skewed.
+
+The desired game behavior is different:
+
+- Common/Uncommon/Rare should remain comparatively stable,
+- Epic+ should improve with duration,
+- the greatest relative change should appear in Legend/Mythic/Phantasm,
+- Phantasm should still remain rare in absolute terms.
+
+Student's t is a better fit because changing `nu` mainly changes tail heaviness while leaving the central region much more stable.
 
 ## Rarity thresholds
 
-Rarity is selected by comparing `Q` against ordered rarity thresholds:
+Rarity is selected by comparing `Q` against ordered thresholds:
 
 ```text
 qCommonMax
@@ -102,60 +119,66 @@ For simulation only, a representative Medium distribution may be calibrated to:
 | Mythic | 0.8% |
 | Phantasm | 0.2% |
 
-Using `nu = 6` for Medium and choosing thresholds to reproduce that reference distribution gives approximate normalized `Q` boundaries:
+Using `nu = 6` for Medium, choose Student's t quantile boundaries that reproduce the cumulative probabilities of that reference distribution.
 
-```text
-Common / Uncommon : 0.9609
-Uncommon / Rare   : 1.4263
-Rare / Epic       : 1.8806
-Epic / Legend     : 2.3279
-Legend / Mythic   : 2.8020
-Mythic / Phantasm : 3.4652
-```
+Those threshold values are calibration parameters and are not production commitments.
 
-These are simulation calibration values, not production commitments.
+## Representative effect
 
-## Example resulting distributions
-
-Using the same thresholds for each duration class gives approximately:
+When Medium is calibrated to the reference distribution above and the same thresholds are used for all durations, the intended approximate shape is:
 
 | Rarity | Short nu=8 | Medium nu=6 | Long nu=5 |
 |---|---:|---:|---:|
-| Common | 53.54% | 55.00% | 55.98% |
-| Uncommon | 28.51% | 25.00% | 22.92% |
-| Rare | 12.12% | 12.00% | 11.70% |
-| Epic | 4.13% | 5.00% | 5.40% |
-| Legend | 1.28% | 2.00% | 2.45% |
-| Mythic | 0.37% | 0.80% | 1.16% |
-| Phantasm | 0.05% | 0.20% | 0.39% |
+| Common | ~55.05% | 55.00% | ~54.96% |
+| Uncommon | ~25.37% | 25.00% | ~24.71% |
+| Rare | ~12.20% | 12.00% | ~11.84% |
+| Epic | ~4.91% | 5.00% | ~5.06% |
+| Legend | ~1.78% | 2.00% | ~2.15% |
+| Mythic | ~0.59% | 0.80% | ~0.97% |
+| Phantasm | ~0.10% | 0.20% | ~0.31% |
 
-This is the intended qualitative behavior:
+These values are illustrative simulation targets rather than acceptance constants.
 
-- Short suppresses the extreme upper tail.
-- Medium is the neutral reference.
-- Long improves Epic+ and especially Legend/Mythic/Phantasm opportunity.
-- Phantasm rises gradually in absolute probability rather than receiving a direct `x4` multiplier.
+The important behavior is:
 
-The exact probability ratios are not acceptance requirements; the smooth-tail shape is.
+- lower tiers move only slightly,
+- Epic changes only slightly,
+- progressively rarer tiers receive progressively stronger relative tail benefit,
+- Phantasm remains rare in absolute terms,
+- no tier receives an arbitrary direct multiplier.
 
-## Important interpretation
+## Interpretation of degrees of freedom
 
-A lower `nu` in this normalized model creates a more right-skewed distribution.
-
-That does **not** mean every upper tier rises equally. Probability mass is redistributed continuously according to the common thresholds.
-
-This is preferable to independent rarity multipliers because adjacent tiers remain mathematically related and there is no arbitrary discontinuity such as:
+In this model:
 
 ```text
-Mythic x3
-Phantasm x4
+larger nu
+  -> closer to normal distribution
+  -> thinner tail
+  -> fewer extreme high-rarity outcomes
+
+smaller nu
+  -> heavier tail
+  -> more extreme high-rarity outcomes
 ```
+
+Initial duration parameters:
+
+```text
+Short   nu = 8
+Medium  nu = 6
+Long    nu = 5
+```
+
+These are tunable L3 defaults.
+
+A future stronger rarity-focused duration or modifier could use a lower `nu`, but ordinary production tuning should avoid values that make the extreme tail dominate total item value.
 
 ## Zone reachability
 
 Zone authority remains explicit.
 
-A zone may still mark upper rarities unreachable. Duration must not silently override that decision.
+A zone may mark upper rarities unreachable. Duration must not silently override that decision.
 
 Conceptually:
 
@@ -164,7 +187,7 @@ if rarity not reachable in zone:
     probability = 0
 ```
 
-The remaining reachable probabilities are then renormalized.
+Remaining reachable outcomes are resolved under the zone's approved rule.
 
 Therefore Long does not automatically unlock Mythic or Phantasm.
 
@@ -188,10 +211,12 @@ RarityDistributionInput {
 Initial calculation:
 
 ```text
-X ~ ChiSquare(degreesOfFreedom[durationClass])
-Q = X / degreesOfFreedom[durationClass]
+T ~ StudentT(degreesOfFreedom[durationClass])
+Q = T
 rarity = classify(Q, rarityThresholds)
 ```
+
+The resolver must consume configuration rather than embedding `8 / 6 / 5` or threshold values directly into reward-resolution code.
 
 Future tuning may adjust:
 
@@ -200,9 +225,22 @@ Future tuning may adjust:
 - thresholds by difficulty,
 - reachability,
 - equipment/progression modifiers,
-- additional distribution parameters if chi-square alone becomes insufficient.
+- score shifts or scale modifiers if later required.
 
-The initial implementation should keep these values external to the resolver.
+## Extension guidance
+
+Future modifiers should preferably remain mathematically distinct.
+
+Examples:
+
+```text
+duration           -> degrees of freedom / tail thickness
+zone                -> rarity thresholds / reachability
+luck or equipment   -> optional score shift or threshold adjustment
+risk                -> optional independent quality modifier
+```
+
+This separation avoids overloading `nu` with every rarity-related mechanic.
 
 ## Simulator metrics
 
@@ -255,9 +293,11 @@ Additional constraints:
 
 1. No individual upper tier receives an independent duration multiplier in the baseline model.
 2. Duration effects should remain smooth under small changes to `nu`.
-3. Long must not create an order-of-magnitude increase in Phantasm probability under ordinary tuning.
-4. Zone reachability remains authoritative.
-5. Drop quantity and per-draw rarity quality remain separately measurable.
+3. Common/Uncommon/Rare probabilities should remain comparatively stable under ordinary `nu` changes.
+4. Long must not create an order-of-magnitude increase in Phantasm probability under ordinary tuning.
+5. Zone reachability remains authoritative.
+6. Drop quantity and per-draw rarity quality remain separately measurable.
+7. The baseline uses the one-sided upper tail, not `abs(T)`.
 
 ## Formation independence
 
@@ -286,7 +326,7 @@ This ADR does not decide:
 - item-specific rarity tables,
 - Gold-equivalent valuation of rare drops,
 - rarity effects from formation/equipment/progression,
-- whether a different statistical family replaces chi-square after simulation testing.
+- final score-shift or scale-modifier mechanics.
 
 ## Result
 
@@ -298,10 +338,10 @@ Duration
   +--> nu (degrees of freedom)
           |
           v
-   Chi-square draw X
+   Student's t draw T
           |
           v
-      Q = X / nu
+          Q = T
           |
           v
   Shared rarity thresholds
@@ -310,4 +350,6 @@ Duration
  Common ... Phantasm
 ```
 
-This replaces the earlier direct rarity-multiplier table and gives Long operations a smoother, tunable upper-tail advantage.
+This replaces both the earlier direct rarity-multiplier table and the chi-square variant.
+
+The resulting design keeps lower-tier probabilities comparatively stable while allowing Long operations to gain a smooth, tunable upper-tail rarity advantage.
