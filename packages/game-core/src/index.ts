@@ -32,6 +32,8 @@ export * from "./domain/representative-zone-shadow-report";
 
 export * from "./domain/full-profile-rarity-validation";
 
+export * from "./domain/production-zone-rarity-calibration";
+
 export * from "./domain/equipment-effects";
 
 export * from "./domain/balance-simulator";
