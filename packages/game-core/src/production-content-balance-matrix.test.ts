@@ -17,22 +17,30 @@ describe("production content balance matrix", () => {
     expect(report.allFormationTotalOutputOrdered).toBe(true);
   });
 
-  it("surfaces short-duration solo pressure in higher zones instead of hiding it", () => {
+  it("restores the short-duration Solo ninety-percent floor across all initial zones", () => {
     const report = buildProductionContentBalanceMatrix();
-    const shortFailures = report.soloDiagnostics.filter(
-      (row) => row.durationClass === "Short" && !row.soloMeetsNinetyPercent
+    const shortDiagnostics = report.soloDiagnostics.filter(
+      (row) => row.durationClass === "Short"
     );
 
-    expect(shortFailures.map((row) => row.zoneName)).toEqual([
-      "Shattered Causeway",
-      "Ashwind Highlands",
-      "Starfall Frontier"
-    ]);
-    expect(
-      report.soloDiagnostics.find(
-        (row) => row.zoneName === "Wayfarer Meadow" && row.durationClass === "Short"
-      )?.soloMeetsNinetyPercent
-    ).toBe(true);
+    expect(shortDiagnostics).toHaveLength(5);
+    expect(shortDiagnostics.every((row) => row.soloMeetsNinetyPercent)).toBe(true);
+    expect(Math.min(...shortDiagnostics.map((row) => row.soloRelativeToBestGroup))).toBeGreaterThanOrEqual(0.9);
+  });
+
+  it("keeps Solo zone-risk overhead neutral while increasing group overhead", () => {
+    const report = buildProductionContentBalanceMatrix();
+    const rows = report.rows.filter(
+      (row) => row.zone.displayName === "Starfall Frontier" && row.durationClass === "Short"
+    );
+
+    const solo = rows.find((row) => row.formationClass === "Solo")!;
+    const party = rows.find((row) => row.formationClass === "Party")!;
+    const caravan = rows.find((row) => row.formationClass === "Caravan")!;
+
+    expect(solo.zoneRiskOperationalCostMultiplier).toBe(1);
+    expect(party.zoneRiskOperationalCostMultiplier).toBeGreaterThan(1);
+    expect(caravan.zoneRiskOperationalCostMultiplier).toBeGreaterThan(party.zoneRiskOperationalCostMultiplier);
   });
 
   it("keeps rarity opportunity formation-independent within a zone and duration", () => {
