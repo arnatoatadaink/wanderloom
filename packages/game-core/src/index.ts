@@ -36,6 +36,8 @@ export * from "./domain/production-zone-rarity-calibration";
 
 export * from "./domain/production-zone-content-map";
 
+export * from "./domain/production-content-balance-matrix";
+
 export * from "./domain/equipment-effects";
 
 export * from "./domain/balance-simulator";
