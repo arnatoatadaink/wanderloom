@@ -19,6 +19,7 @@ import {
   buildProductionZoneRarityStrategy,
   getProductionZoneRarityCalibration
 } from "./production-zone-rarity-calibration";
+import { calculateZoneRiskOperationalCostMultiplier } from "./zone-risk-operational-cost";
 
 export interface ProductionContentBalanceRow {
   readonly zone: ProductionZoneContentDefinition;
@@ -26,6 +27,7 @@ export interface ProductionContentBalanceRow {
   readonly formationClass: FormationClass;
   readonly participantCount: number;
   readonly zoneRewardScale: number;
+  readonly zoneRiskOperationalCostMultiplier: number;
   readonly economy: FormationEconomyMetrics;
   readonly rarity: RarityOpportunityMetrics;
 }
@@ -56,10 +58,33 @@ const DEFAULT_PARTICIPANTS: Readonly<Record<FormationClass, number>> = {
   Caravan: 5
 };
 
-function scaleEconomyParameters(zoneRewardScale: number): FormationEconomyParameters {
+function scaleEconomyParameters(
+  zoneRewardScale: number,
+  zone: ProductionZoneContentDefinition
+): FormationEconomyParameters {
   const base = INITIAL_FORMATION_ECONOMY_PARAMETERS;
   return {
     ...base,
+    baseOperationalCost: {
+      Solo:
+        base.baseOperationalCost.Solo * calculateZoneRiskOperationalCostMultiplier({
+          formationClass: "Solo",
+          riskIndex: zone.riskIndex,
+          zoneRewardScale
+        }),
+      Party:
+        base.baseOperationalCost.Party * calculateZoneRiskOperationalCostMultiplier({
+          formationClass: "Party",
+          riskIndex: zone.riskIndex,
+          zoneRewardScale
+        }),
+      Caravan:
+        base.baseOperationalCost.Caravan * calculateZoneRiskOperationalCostMultiplier({
+          formationClass: "Caravan",
+          riskIndex: zone.riskIndex,
+          zoneRewardScale
+        })
+    },
     grossReward: {
       Solo: {
         Short: base.grossReward.Solo.Short * zoneRewardScale,
@@ -91,7 +116,7 @@ export function buildProductionContentBalanceMatrix(input: {
 
   for (const zone of zones) {
     const zoneRewardScale = zone.baseRewardGold / INITIAL_PRODUCTION_ZONE_CONTENT_MAP[0]!.baseRewardGold;
-    const parameters = scaleEconomyParameters(zoneRewardScale);
+    const parameters = scaleEconomyParameters(zoneRewardScale, zone);
     const rarityCalibration = getProductionZoneRarityCalibration(zone.rarityTier);
 
     for (const durationClass of DURATIONS) {
@@ -106,6 +131,11 @@ export function buildProductionContentBalanceMatrix(input: {
       for (const formationClass of FORMATIONS) {
         const participantCount = input.participantCounts?.[formationClass]
           ?? DEFAULT_PARTICIPANTS[formationClass];
+        const zoneRiskOperationalCostMultiplier = calculateZoneRiskOperationalCostMultiplier({
+          formationClass,
+          riskIndex: zone.riskIndex,
+          zoneRewardScale
+        });
         const economy = calculateFormationEconomy({
           formationClass,
           participantCount,
@@ -120,6 +150,7 @@ export function buildProductionContentBalanceMatrix(input: {
           formationClass,
           participantCount,
           zoneRewardScale,
+          zoneRiskOperationalCostMultiplier,
           economy,
           rarity
         });
