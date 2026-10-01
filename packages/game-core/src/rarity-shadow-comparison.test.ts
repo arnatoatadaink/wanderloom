@@ -51,6 +51,33 @@ describe("rarity resolver shadow comparison", () => {
     expect(Math.abs(totalDelta)).toBeLessThan(1e-12);
   });
 
+  it("reports distribution distance and cumulative upper-tail deltas", () => {
+    const report = compareRarityResolutionStrategies(input);
+    expect(report.distance.totalVariationDistance).toBeGreaterThanOrEqual(0);
+    expect(report.distance.totalVariationDistance).toBeLessThanOrEqual(1);
+    expect(report.distance.maxAbsoluteTierDelta).toBeGreaterThanOrEqual(0);
+    expect(report.distance.maxAbsoluteTierDelta).toBeLessThanOrEqual(1);
+    expect(Number.isFinite(report.distance.tailDeltaCandidateMinusLegacy.rareOrBetter)).toBe(true);
+    expect(Number.isFinite(report.distance.tailDeltaCandidateMinusLegacy.epicOrBetter)).toBe(true);
+    expect(Number.isFinite(report.distance.tailDeltaCandidateMinusLegacy.legendOrBetter)).toBe(true);
+    expect(Number.isFinite(report.distance.tailDeltaCandidateMinusLegacy.mythicOrBetter)).toBe(true);
+    expect(Number.isFinite(report.distance.tailDeltaCandidateMinusLegacy.phantasm)).toBe(true);
+  });
+
+  it("computes total variation as half the L1 tier-distance", () => {
+    const report = compareRarityResolutionStrategies(input);
+    const expected =
+      0.5 *
+      Object.values(report.probabilityDeltaCandidateMinusLegacy)
+        .map(Math.abs)
+        .reduce((a, b) => a + b, 0);
+    expect(report.distance.totalVariationDistance).toBeCloseTo(expected, 15);
+    expect(report.distance.maxAbsoluteTierDelta).toBeCloseTo(
+      Math.max(...Object.values(report.probabilityDeltaCandidateMinusLegacy).map(Math.abs)),
+      15
+    );
+  });
+
   it("rejects invalid iteration counts", () => {
     expect(() => compareRarityResolutionStrategies({ ...input, iterations: 0 })).toThrow(RangeError);
   });
