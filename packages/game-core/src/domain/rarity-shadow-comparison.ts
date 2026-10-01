@@ -28,6 +28,23 @@ export interface RarityShadowStrategySummary {
   readonly opportunity: RarityOpportunityMetrics;
 }
 
+export interface RarityShadowTailDelta {
+  readonly rareOrBetter: number;
+  readonly epicOrBetter: number;
+  readonly legendOrBetter: number;
+  readonly mythicOrBetter: number;
+  readonly phantasm: number;
+}
+
+export interface RarityShadowDistanceMetrics {
+  /** Half the L1 distance between the two categorical rarity distributions. */
+  readonly totalVariationDistance: number;
+  /** Largest absolute candidate-minus-legacy probability delta for any single rarity tier. */
+  readonly maxAbsoluteTierDelta: number;
+  /** Candidate-minus-legacy cumulative upper-tail probability deltas. */
+  readonly tailDeltaCandidateMinusLegacy: RarityShadowTailDelta;
+}
+
 export interface RarityShadowComparisonReport {
   readonly iterations: number;
   readonly sameRarityCount: number;
@@ -36,6 +53,7 @@ export interface RarityShadowComparisonReport {
   readonly candidate: RarityShadowStrategySummary;
   readonly probabilityDeltaCandidateMinusLegacy: Readonly<Record<ItemRarity, number>>;
   readonly expectedRarityScoreDelta: number;
+  readonly distance: RarityShadowDistanceMetrics;
 }
 
 function emptyCounts(): Record<ItemRarity, number> {
@@ -53,6 +71,29 @@ function toSummary(
     rarityCounts: counts,
     probabilityByRarity,
     opportunity: calculateRarityOpportunityMetrics(probabilityByRarity)
+  };
+}
+
+function buildDistanceMetrics(
+  deltas: Readonly<Record<ItemRarity, number>>,
+  legacy: RarityShadowStrategySummary,
+  candidate: RarityShadowStrategySummary
+): RarityShadowDistanceMetrics {
+  const absoluteTierDeltas = ITEM_RARITIES.map((rarity) => Math.abs(deltas[rarity]));
+  return {
+    totalVariationDistance: 0.5 * absoluteTierDeltas.reduce((sum, value) => sum + value, 0),
+    maxAbsoluteTierDelta: Math.max(...absoluteTierDeltas),
+    tailDeltaCandidateMinusLegacy: {
+      rareOrBetter:
+        candidate.opportunity.rareOrBetterProbability - legacy.opportunity.rareOrBetterProbability,
+      epicOrBetter:
+        candidate.opportunity.epicOrBetterProbability - legacy.opportunity.epicOrBetterProbability,
+      legendOrBetter:
+        candidate.opportunity.legendOrBetterProbability - legacy.opportunity.legendOrBetterProbability,
+      mythicOrBetter:
+        candidate.opportunity.mythicOrBetterProbability - legacy.opportunity.mythicOrBetterProbability,
+      phantasm: candidate.opportunity.phantasmProbability - legacy.opportunity.phantasmProbability
+    }
   };
 }
 
@@ -110,6 +151,7 @@ export function compareRarityResolutionStrategies(
     candidate,
     probabilityDeltaCandidateMinusLegacy,
     expectedRarityScoreDelta:
-      candidate.opportunity.expectedRarityScore - legacy.opportunity.expectedRarityScore
+      candidate.opportunity.expectedRarityScore - legacy.opportunity.expectedRarityScore,
+    distance: buildDistanceMetrics(probabilityDeltaCandidateMinusLegacy, legacy, candidate)
   };
 }
