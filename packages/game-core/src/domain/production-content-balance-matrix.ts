@@ -15,7 +15,10 @@ import {
   INITIAL_PRODUCTION_ZONE_CONTENT_MAP,
   type ProductionZoneContentDefinition
 } from "./production-zone-content-map";
-import { buildProductionZoneRarityStrategy } from "./production-zone-rarity-calibration";
+import {
+  buildProductionZoneRarityStrategy,
+  getProductionZoneRarityCalibration
+} from "./production-zone-rarity-calibration";
 
 export interface ProductionContentBalanceRow {
   readonly zone: ProductionZoneContentDefinition;
@@ -89,13 +92,14 @@ export function buildProductionContentBalanceMatrix(input: {
   for (const zone of zones) {
     const zoneRewardScale = zone.baseRewardGold / INITIAL_PRODUCTION_ZONE_CONTENT_MAP[0]!.baseRewardGold;
     const parameters = scaleEconomyParameters(zoneRewardScale);
+    const rarityCalibration = getProductionZoneRarityCalibration(zone.rarityTier);
 
     for (const durationClass of DURATIONS) {
       const rarityStrategy = buildProductionZoneRarityStrategy(zone.rarityTier, durationClass);
       const probabilityByRarity = buildDurationRarityDistribution({
         degreesOfFreedom: rarityStrategy.degreesOfFreedom,
-        thresholds: rarityStrategy.thresholds,
-        reachableRarities: rarityStrategy.reachableRarities
+        thresholds: rarityCalibration.thresholds,
+        reachableRarities: rarityCalibration.reachableRarities
       });
       const rarity = calculateRarityOpportunityMetrics(probabilityByRarity);
 
