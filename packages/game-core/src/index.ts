@@ -24,6 +24,8 @@ export * from "./domain/progression";
 
 export * from "./domain/rarity-zone-rewards";
 
+export * from "./domain/rarity-resolution-strategy";
+
 export * from "./domain/equipment-effects";
 
 export * from "./domain/balance-simulator";
