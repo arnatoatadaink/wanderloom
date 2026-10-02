@@ -5,6 +5,7 @@ import type {
   InventoryDto,
   ZoneDto
 } from "./api-client";
+import { isZoneUnlocked } from "./zone-availability";
 
 export type AppPhase =
   | "booting"
@@ -64,7 +65,7 @@ export function chooseInitialSelection(
   readonly zoneId: string | null;
   readonly durationId: string | null;
 } {
-  const zone = zones[0];
+  const zone = zones.find(isZoneUnlocked);
   const duration = zone?.durations[0];
 
   return {
