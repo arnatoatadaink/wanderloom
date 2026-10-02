@@ -14,6 +14,7 @@ describe("production content balance matrix", () => {
   it("keeps total formation output ordered and all initial net rewards non-negative", () => {
     const report = buildProductionContentBalanceMatrix();
     expect(report.allNetRewardsNonNegative).toBe(true);
+    expect(report.allExpectedNetGoldNonNegative).toBe(true);
     expect(report.allFormationTotalOutputOrdered).toBe(true);
   });
 
@@ -65,6 +66,33 @@ describe("production content balance matrix", () => {
 
     expect(short.riskFailure.failureProbability).toBeLessThan(medium.riskFailure.failureProbability);
     expect(medium.riskFailure.failureProbability).toBeLessThan(long.riskFailure.failureProbability);
+  });
+
+  it("applies the symmetric production loss policy to expected Gold and EXP retention", () => {
+    const report = buildProductionContentBalanceMatrix();
+    const row = report.rows.find(
+      (candidate) =>
+        candidate.zone.displayName === "Starfall Frontier" &&
+        candidate.durationClass === "Long" &&
+        candidate.formationClass === "Solo"
+    )!;
+
+    expect(row.riskFailure.failureProbability).toBeCloseTo(0.125);
+    expect(row.lossExpectation.expectedGoldRetentionRatio).toBeCloseTo(0.9375);
+    expect(row.lossExpectation.expectedExpRetentionRatio).toBeCloseTo(0.9375);
+    expect(row.lossExpectation.expectedDropRetentionRatio).toBeCloseTo(0.875);
+    expect(row.lossExpectation.expectedNetGold).toBeLessThan(row.economy.netReward);
+  });
+
+  it("keeps loss-retention ratios formation-independent within a zone and duration", () => {
+    const report = buildProductionContentBalanceMatrix();
+    const rows = report.rows.filter(
+      (row) => row.zone.displayName === "Starfall Frontier" && row.durationClass === "Long"
+    );
+
+    expect(new Set(rows.map((row) => row.lossExpectation.expectedGoldRetentionRatio)).size).toBe(1);
+    expect(new Set(rows.map((row) => row.lossExpectation.expectedExpRetentionRatio)).size).toBe(1);
+    expect(new Set(rows.map((row) => row.lossExpectation.expectedDropRetentionRatio)).size).toBe(1);
   });
 
   it("keeps rarity opportunity formation-independent within a zone and duration", () => {
