@@ -42,6 +42,8 @@ export * from "./domain/zone-risk-operational-cost";
 
 export * from "./domain/risk-failure-probability";
 
+export * from "./domain/production-loss-policy-calibration";
+
 export * from "./domain/equipment-effects";
 
 export * from "./domain/balance-simulator";
