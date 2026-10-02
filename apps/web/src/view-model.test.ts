@@ -33,6 +33,40 @@ describe("CP-11/17 view model", () => {
     });
   });
 
+  it("skips explicitly locked zones when choosing the initial route", () => {
+    expect(
+      chooseInitialSelection([
+        {
+          zoneId: "zone-locked",
+          name: "Locked",
+          unlocked: false,
+          minimumZoneRank: 1,
+          durations: []
+        } as never,
+        {
+          zoneId: "zone-open",
+          name: "Open",
+          unlocked: true,
+          minimumZoneRank: 0,
+          durations: [
+            {
+              durationId: "short",
+              durationMs: 300_000,
+              preview: {
+                gold: { min: 5, max: 5 },
+                exp: { min: 10, max: 10 },
+                drops: { minItems: 0, maxItems: 0 }
+              }
+            }
+          ]
+        } as never
+      ])
+    ).toEqual({
+      zoneId: "zone-open",
+      durationId: "short"
+    });
+  });
+
   it("derives exploring and claimable from server end time", () => {
     const exploration = {
       explorationId: "exp-1",
