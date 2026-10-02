@@ -31,6 +31,19 @@ export interface PlayerCoreSnapshot {
   readonly playerId: PlayerId;
   readonly character: CharacterState;
   readonly progression: ProgressionState;
+  /**
+   * Optional for compatibility with snapshots created before ADR-024.
+   * Missing values are interpreted as Rank 0 by readPlayerZoneRank().
+   */
+  readonly zoneRank?: number;
   readonly activeExploration: ActiveExploration | null;
   readonly updatedAt: IsoDateTime;
+}
+
+export function readPlayerZoneRank(snapshot: PlayerCoreSnapshot): number {
+  const zoneRank = snapshot.zoneRank ?? 0;
+  if (!Number.isSafeInteger(zoneRank) || zoneRank < 0) {
+    throw new RangeError("zoneRank must be a non-negative safe integer");
+  }
+  return zoneRank;
 }
