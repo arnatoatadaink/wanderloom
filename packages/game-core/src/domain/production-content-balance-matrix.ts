@@ -24,6 +24,14 @@ import {
   calculateRiskFailureProbability,
   type RiskFailureProbabilityMetrics
 } from "./risk-failure-probability";
+import { calculateProductionLossPolicyExpectation } from "./production-loss-policy-calibration";
+
+export interface ProductionLossExpectationSummary {
+  readonly expectedGoldRetentionRatio: number;
+  readonly expectedExpRetentionRatio: number;
+  readonly expectedDropRetentionRatio: number;
+  readonly expectedNetGold: number;
+}
 
 export interface ProductionContentBalanceRow {
   readonly zone: ProductionZoneContentDefinition;
@@ -33,6 +41,7 @@ export interface ProductionContentBalanceRow {
   readonly zoneRewardScale: number;
   readonly zoneRiskOperationalCostMultiplier: number;
   readonly riskFailure: RiskFailureProbabilityMetrics;
+  readonly lossExpectation: ProductionLossExpectationSummary;
   readonly economy: FormationEconomyMetrics;
   readonly rarity: RarityOpportunityMetrics;
 }
@@ -51,6 +60,7 @@ export interface ProductionContentBalanceMatrixReport {
   readonly rows: readonly ProductionContentBalanceRow[];
   readonly soloDiagnostics: readonly ProductionContentBalanceDiagnostic[];
   readonly allNetRewardsNonNegative: boolean;
+  readonly allExpectedNetGoldNonNegative: boolean;
   readonly allFormationTotalOutputOrdered: boolean;
 }
 
@@ -152,6 +162,18 @@ export function buildProductionContentBalanceMatrix(input: {
           travelCost: zone.travelCostGold,
           parameters
         });
+        const lossMetrics = calculateProductionLossPolicyExpectation({
+          failureProbability: riskFailure.failureProbability,
+          generatedGold: economy.grossReward,
+          generatedExp: 0,
+          fixedGoldCost: economy.finalGoldRequirement
+        });
+        const lossExpectation: ProductionLossExpectationSummary = {
+          expectedGoldRetentionRatio: lossMetrics.expectedGoldRetentionRatio,
+          expectedExpRetentionRatio: lossMetrics.expectedExpRetentionRatio,
+          expectedDropRetentionRatio: lossMetrics.expectedDropRetentionRatio,
+          expectedNetGold: lossMetrics.expectedGoldAfterFixedCost
+        };
 
         rows.push({
           zone,
@@ -161,6 +183,7 @@ export function buildProductionContentBalanceMatrix(input: {
           zoneRewardScale,
           zoneRiskOperationalCostMultiplier,
           riskFailure,
+          lossExpectation,
           economy,
           rarity
         });
@@ -194,6 +217,9 @@ export function buildProductionContentBalanceMatrix(input: {
   }
 
   const allNetRewardsNonNegative = rows.every((row) => row.economy.netReward >= 0);
+  const allExpectedNetGoldNonNegative = rows.every(
+    (row) => row.lossExpectation.expectedNetGold >= 0
+  );
   const allFormationTotalOutputOrdered = zones.every((zone) =>
     DURATIONS.every((durationClass) => {
       const scenario = rows.filter(
@@ -210,6 +236,7 @@ export function buildProductionContentBalanceMatrix(input: {
     rows,
     soloDiagnostics,
     allNetRewardsNonNegative,
+    allExpectedNetGoldNonNegative,
     allFormationTotalOutputOrdered
   };
 }
