@@ -1,8 +1,9 @@
 import type { ExplorationArchiveEntry } from "./archive";
-import type {
-  ActiveExploration,
-  IsoDateTime,
-  PlayerCoreSnapshot
+import {
+  readPlayerZoneRank,
+  type ActiveExploration,
+  type IsoDateTime,
+  type PlayerCoreSnapshot
 } from "./core-snapshot";
 import type {
   ItemInstance,
@@ -14,6 +15,8 @@ import type {
 } from "./mutation-result";
 import { deriveExplorationState } from "./exploration-state";
 import { applyProgressionExp, type ProgressionRule } from "./progression";
+import { INITIAL_PRODUCTION_ZONE_CONTENT_MAP } from "./production-zone-content-map";
+import { resolveZoneRankProgression } from "./zone-rank-progression";
 
 export interface ExplorationResolution {
   readonly result: string;
@@ -70,6 +73,18 @@ export function calculateClaim(
         exp: input.core.progression.exp + input.resolution.exp
       };
 
+  const currentZoneRank = readPlayerZoneRank(input.core);
+  const isProductionZone = INITIAL_PRODUCTION_ZONE_CONTENT_MAP.some(
+    (zone) => zone.zoneId === input.exploration.zoneId
+  );
+  const nextZoneRank = isProductionZone
+    ? resolveZoneRankProgression({
+        currentZoneRank,
+        completedZoneId: input.exploration.zoneId,
+        succeeded: input.resolution.result === "success"
+      }).nextZoneRank
+    : currentZoneRank;
+
   const nextCore: PlayerCoreSnapshot = {
     ...input.core,
     stateVersion: input.core.stateVersion + 1,
@@ -77,6 +92,7 @@ export function calculateClaim(
       ...progressed,
       gold: progressed.gold + input.resolution.gold
     },
+    zoneRank: nextZoneRank,
     activeExploration: null,
     updatedAt: input.claimedAt
   };
