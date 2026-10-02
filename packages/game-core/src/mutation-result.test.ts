@@ -11,6 +11,7 @@ import type {
   MutationResult,
   SnapshotIntegrityError,
   VersionConflict,
+  ZoneId,
   ZoneLocked
 } from "./index";
 
@@ -76,7 +77,7 @@ describe("B-005 mutation results and errors", () => {
       } satisfies ItemNotOwned,
       {
         code: "zone_locked",
-        zoneId: "mossglass-grove",
+        zoneId: "mossglass-grove" as ZoneId,
         currentZoneRank: 0,
         requiredZoneRank: 1
       } satisfies ZoneLocked
