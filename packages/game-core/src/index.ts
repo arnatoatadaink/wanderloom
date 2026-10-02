@@ -22,6 +22,10 @@ export * from "./domain/expedition-outcome";
 
 export * from "./domain/progression";
 
+export * from "./domain/production-progression-curve";
+
+export * from "./domain/production-progression-scenario-report";
+
 export * from "./domain/rarity-zone-rewards";
 
 export * from "./domain/rarity-resolution-strategy";
