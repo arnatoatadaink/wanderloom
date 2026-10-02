@@ -1,9 +1,15 @@
-import type { ActiveExploration, IsoDateTime, PlayerCoreSnapshot } from "./core-snapshot";
+import {
+  readPlayerZoneRank,
+  type ActiveExploration,
+  type IsoDateTime,
+  type PlayerCoreSnapshot
+} from "./core-snapshot";
 import type { ExplorationId, ZoneId } from "./ids";
 import type { PlayerInventorySnapshot } from "./inventory-snapshot";
 import { freezeExplorationCharacter, type EquipmentEffectDefinition } from "./equipment-effects";
-import type { InvalidExplorationState, MutationResult } from "./mutation-result";
+import type { InvalidExplorationState, MutationResult, ZoneLocked } from "./mutation-result";
 import { deriveExplorationState } from "./exploration-state";
+import { INITIAL_PRODUCTION_ZONE_CONTENT_MAP } from "./production-zone-content-map";
 
 export interface StartExplorationInput {
   readonly player: PlayerCoreSnapshot;
@@ -26,7 +32,7 @@ export interface StartExplorationOutput {
 
 export function startExploration(
   input: StartExplorationInput
-): MutationResult<StartExplorationOutput, InvalidExplorationState> {
+): MutationResult<StartExplorationOutput, InvalidExplorationState | ZoneLocked> {
   const currentState = deriveExplorationState(
     input.player.activeExploration,
     input.startedAt
@@ -47,6 +53,24 @@ export function startExploration(
         allowedStates: ["idle"]
       }
     };
+  }
+
+  const productionZone = INITIAL_PRODUCTION_ZONE_CONTENT_MAP.find(
+    (zone) => zone.zoneId === input.zoneId
+  );
+  if (productionZone !== undefined) {
+    const currentZoneRank = readPlayerZoneRank(input.player);
+    if (currentZoneRank < productionZone.minimumZoneRank) {
+      return {
+        ok: false,
+        error: {
+          code: "zone_locked",
+          zoneId: input.zoneId,
+          currentZoneRank,
+          requiredZoneRank: productionZone.minimumZoneRank
+        }
+      };
+    }
   }
 
   const startedAtMs = Date.parse(input.startedAt);

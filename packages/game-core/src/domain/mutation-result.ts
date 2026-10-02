@@ -1,5 +1,5 @@
 import type { IsoDateTime } from "./core-snapshot";
-import type { ExplorationId, ItemInstanceId } from "./ids";
+import type { ExplorationId, ItemInstanceId, ZoneId } from "./ids";
 
 export type SnapshotKind = "core" | "inventory";
 
@@ -25,6 +25,13 @@ export interface InvalidExplorationState {
    */
   readonly actualState: string;
   readonly allowedStates: readonly string[];
+}
+
+export interface ZoneLocked {
+  readonly code: "zone_locked";
+  readonly zoneId: ZoneId;
+  readonly currentZoneRank: number;
+  readonly requiredZoneRank: number;
 }
 
 export interface SnapshotIntegrityViolation {
@@ -54,6 +61,7 @@ export type MutationError =
   | VersionConflict
   | AlreadyClaimed
   | InvalidExplorationState
+  | ZoneLocked
   | SnapshotIntegrityError
   | InvalidEquipmentSlot
   | ItemNotOwned;

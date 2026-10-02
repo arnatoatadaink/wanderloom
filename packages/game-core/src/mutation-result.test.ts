@@ -10,7 +10,9 @@ import type {
   MutationError,
   MutationResult,
   SnapshotIntegrityError,
-  VersionConflict
+  VersionConflict,
+  ZoneId,
+  ZoneLocked
 } from "./index";
 
 function describeMutationError(error: MutationError): string {
@@ -27,6 +29,8 @@ function describeMutationError(error: MutationError): string {
       return `${error.slot}:${error.allowedSlots.join(",")}`;
     case "item_not_owned":
       return error.itemInstanceId;
+    case "zone_locked":
+      return `${error.zoneId}:${error.currentZoneRank}->${error.requiredZoneRank}`;
   }
 }
 
@@ -70,7 +74,13 @@ describe("B-005 mutation results and errors", () => {
       {
         code: "item_not_owned",
         itemInstanceId: "item-missing" as ItemInstanceId
-      } satisfies ItemNotOwned
+      } satisfies ItemNotOwned,
+      {
+        code: "zone_locked",
+        zoneId: "mossglass-grove" as ZoneId,
+        currentZoneRank: 0,
+        requiredZoneRank: 1
+      } satisfies ZoneLocked
     ];
 
     expect(errors.map(describeMutationError)).toEqual([
@@ -79,7 +89,8 @@ describe("B-005 mutation results and errors", () => {
       "exploring:ready_to_claim",
       "inventory:1",
       "weapon:charm",
-      "item-missing"
+      "item-missing",
+      "mossglass-grove:0->1"
     ]);
   });
 

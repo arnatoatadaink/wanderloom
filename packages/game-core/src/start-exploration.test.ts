@@ -123,6 +123,7 @@ describe("E-002 start exploration", () => {
     if (result.ok) return;
 
     expect(result.error.code).toBe("invalid_exploration_state");
+    if (result.error.code !== "invalid_exploration_state") return;
     expect(result.error.actualState).toBe("exploring");
   });
 });
