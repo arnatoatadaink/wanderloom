@@ -36,6 +36,8 @@ export * from "./domain/production-zone-rarity-calibration";
 
 export * from "./domain/production-zone-content-map";
 
+export * from "./domain/production-zone-exp-reward";
+
 export * from "./domain/production-content-balance-matrix";
 
 export * from "./domain/zone-risk-operational-cost";
