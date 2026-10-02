@@ -40,6 +40,8 @@ export * from "./domain/production-content-balance-matrix";
 
 export * from "./domain/zone-risk-operational-cost";
 
+export * from "./domain/risk-failure-probability";
+
 export * from "./domain/equipment-effects";
 
 export * from "./domain/balance-simulator";
