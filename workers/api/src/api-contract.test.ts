@@ -21,6 +21,29 @@ describe("CP-29 API error contract", () => {
     expect(isRetryableApiError("google_drive_reauthorization_required")).toBe(false);
     expect(isRetryableApiError("invalid_request")).toBe(false);
     expect(isRetryableApiError("player_not_found")).toBe(false);
+    expect(isRetryableApiError("zone_locked")).toBe(false);
+  });
+
+  it("maps a locked production zone to forbidden", () => {
+    expect(apiErrorStatus("zone_locked")).toBe(403);
+    expect(
+      apiError("zone_locked", {
+        zoneId: "mossglass-grove",
+        currentZoneRank: 0,
+        requiredZoneRank: 1
+      })
+    ).toEqual({
+      ok: false,
+      error: {
+        code: "zone_locked",
+        retryable: false,
+        details: {
+          zoneId: "mossglass-grove",
+          currentZoneRank: 0,
+          requiredZoneRank: 1
+        }
+      }
+    });
   });
 
   it("builds a stable envelope with optional details", () => {
