@@ -20,6 +20,10 @@ import {
   getProductionZoneRarityCalibration
 } from "./production-zone-rarity-calibration";
 import { calculateZoneRiskOperationalCostMultiplier } from "./zone-risk-operational-cost";
+import {
+  calculateRiskFailureProbability,
+  type RiskFailureProbabilityMetrics
+} from "./risk-failure-probability";
 
 export interface ProductionContentBalanceRow {
   readonly zone: ProductionZoneContentDefinition;
@@ -28,6 +32,7 @@ export interface ProductionContentBalanceRow {
   readonly participantCount: number;
   readonly zoneRewardScale: number;
   readonly zoneRiskOperationalCostMultiplier: number;
+  readonly riskFailure: RiskFailureProbabilityMetrics;
   readonly economy: FormationEconomyMetrics;
   readonly rarity: RarityOpportunityMetrics;
 }
@@ -127,6 +132,10 @@ export function buildProductionContentBalanceMatrix(input: {
         reachableRarities: rarityCalibration.reachableRarities
       });
       const rarity = calculateRarityOpportunityMetrics(probabilityByRarity);
+      const riskFailure = calculateRiskFailureProbability({
+        riskIndex: zone.riskIndex,
+        durationClass
+      });
 
       for (const formationClass of FORMATIONS) {
         const participantCount = input.participantCounts?.[formationClass]
@@ -151,6 +160,7 @@ export function buildProductionContentBalanceMatrix(input: {
           participantCount,
           zoneRewardScale,
           zoneRiskOperationalCostMultiplier,
+          riskFailure,
           economy,
           rarity
         });

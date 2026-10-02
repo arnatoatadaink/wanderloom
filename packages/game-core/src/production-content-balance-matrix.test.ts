@@ -43,6 +43,30 @@ describe("production content balance matrix", () => {
     expect(caravan.zoneRiskOperationalCostMultiplier).toBeGreaterThan(party.zoneRiskOperationalCostMultiplier);
   });
 
+  it("keeps failure probability formation-independent within a zone and duration", () => {
+    const report = buildProductionContentBalanceMatrix();
+    const rows = report.rows.filter(
+      (row) => row.zone.displayName === "Starfall Frontier" && row.durationClass === "Long"
+    );
+
+    expect(rows).toHaveLength(3);
+    expect(new Set(rows.map((row) => row.riskFailure.failureProbability)).size).toBe(1);
+    expect(rows[0]!.riskFailure.failureProbability).toBeCloseTo(0.125);
+  });
+
+  it("increases failure probability with duration for the same zone", () => {
+    const report = buildProductionContentBalanceMatrix();
+    const soloRows = report.rows.filter(
+      (row) => row.zone.displayName === "Ashwind Highlands" && row.formationClass === "Solo"
+    );
+    const short = soloRows.find((row) => row.durationClass === "Short")!;
+    const medium = soloRows.find((row) => row.durationClass === "Medium")!;
+    const long = soloRows.find((row) => row.durationClass === "Long")!;
+
+    expect(short.riskFailure.failureProbability).toBeLessThan(medium.riskFailure.failureProbability);
+    expect(medium.riskFailure.failureProbability).toBeLessThan(long.riskFailure.failureProbability);
+  });
+
   it("keeps rarity opportunity formation-independent within a zone and duration", () => {
     const report = buildProductionContentBalanceMatrix();
     const rows = report.rows.filter(
