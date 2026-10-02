@@ -25,12 +25,16 @@ import {
   type RiskFailureProbabilityMetrics
 } from "./risk-failure-probability";
 import { calculateProductionLossPolicyExpectation } from "./production-loss-policy-calibration";
+import { getProductionZoneExpReward } from "./production-zone-exp-reward";
 
 export interface ProductionLossExpectationSummary {
   readonly expectedGoldRetentionRatio: number;
   readonly expectedExpRetentionRatio: number;
   readonly expectedDropRetentionRatio: number;
   readonly expectedNetGold: number;
+  readonly generatedExp: number;
+  readonly expectedExp: number;
+  readonly expectedExpPerHour: number;
 }
 
 export interface ProductionContentBalanceRow {
@@ -146,6 +150,7 @@ export function buildProductionContentBalanceMatrix(input: {
         riskIndex: zone.riskIndex,
         durationClass
       });
+      const expReward = getProductionZoneExpReward(zone.zoneId, durationClass);
 
       for (const formationClass of FORMATIONS) {
         const participantCount = input.participantCounts?.[formationClass]
@@ -165,14 +170,17 @@ export function buildProductionContentBalanceMatrix(input: {
         const lossMetrics = calculateProductionLossPolicyExpectation({
           failureProbability: riskFailure.failureProbability,
           generatedGold: economy.grossReward,
-          generatedExp: 0,
+          generatedExp: expReward.generatedExp,
           fixedGoldCost: economy.finalGoldRequirement
         });
         const lossExpectation: ProductionLossExpectationSummary = {
           expectedGoldRetentionRatio: lossMetrics.expectedGoldRetentionRatio,
           expectedExpRetentionRatio: lossMetrics.expectedExpRetentionRatio,
           expectedDropRetentionRatio: lossMetrics.expectedDropRetentionRatio,
-          expectedNetGold: lossMetrics.expectedGoldAfterFixedCost
+          expectedNetGold: lossMetrics.expectedGoldAfterFixedCost,
+          generatedExp: expReward.generatedExp,
+          expectedExp: lossMetrics.expectedExp,
+          expectedExpPerHour: lossMetrics.expectedExp / expReward.durationHours
         };
 
         rows.push({
