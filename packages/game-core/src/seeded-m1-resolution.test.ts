@@ -5,6 +5,7 @@ import {
   resolveSeededExpedition,
   resolveSeededM1Exploration,
   type ExplorationId,
+  type ItemDefinitionId,
   type LossPolicy,
   type ZoneId
 } from "./index";
@@ -97,5 +98,30 @@ describe("CP-20 seeded failure resolution", () => {
     });
     expect(otherZone.summaryMetrics.failureRoll).not.toBe(baseline.summaryMetrics.failureRoll);
     expect(otherDuration.summaryMetrics.failureRoll).not.toBe(baseline.summaryMetrics.failureRoll);
+  });
+
+  it("accepts authoritative generated reward inputs without changing seeded outcome selection", () => {
+    const result = resolveSeededExpedition({
+      ...baseInput,
+      seed: "production-override",
+      config: {
+        failureProbability: 0,
+        lossPolicy,
+        generatedGold: 40,
+        generatedExp: 28,
+        generatedDrops: [
+          { itemDefinitionId: "production-placeholder" as ItemDefinitionId }
+        ]
+      }
+    });
+
+    expect(result.result).toBe("success");
+    expect(result.generatedGold).toBe(40);
+    expect(result.generatedExp).toBe(28);
+    expect(result.rewards.retainedGold).toBe(40);
+    expect(result.rewards.retainedExp).toBe(28);
+    expect(result.generatedDrops).toEqual([
+      { itemDefinitionId: "production-placeholder" }
+    ]);
   });
 });
