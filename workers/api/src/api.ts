@@ -772,7 +772,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
         return committed.ok
           ? json({
               ok: true,
-              inventory: committed.value.nextInventory ?? equipped.value.nextInventory,
+              inventory: equipped.value.nextInventory,
               idempotent: false
             })
           : mutationErrorResponse(committed.error);
