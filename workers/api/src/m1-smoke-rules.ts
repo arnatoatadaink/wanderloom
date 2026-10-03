@@ -9,6 +9,7 @@ import {
   type ZoneId,
   type ZoneRewardConfiguration
 } from "@wanderloom/game-core";
+import { resolveProductionDuration } from "./production-zone-catalog";
 
 export interface M1ZoneDefinition {
   readonly zoneId: ZoneId;
@@ -196,8 +197,11 @@ export function resolveM2SmokeDurationMs(
   const duration = zone?.durations.find(
     (entry) => entry.durationId === durationId
   );
+  if (duration !== undefined) {
+    return duration.durationMs;
+  }
 
-  return duration?.durationMs ?? null;
+  return resolveProductionDuration(zoneId, durationId)?.durationMs ?? null;
 }
 
 export function resolveM2SmokeRewardConfiguration(
