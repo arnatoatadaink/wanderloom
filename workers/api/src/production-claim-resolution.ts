@@ -1,14 +1,19 @@
 import {
   buildProductionContentBalanceMatrix,
   INITIAL_PRODUCTION_LOSS_POLICY,
+  instantiateDrop,
   resolveSeededExpedition,
   type ActiveExploration,
-  type ExplorationResolution
+  type ExplorationResolution,
+  type ItemInstanceId
 } from "@wanderloom/game-core";
+import { resolveProductionGeneratedDrops } from "./production-rarity-drop";
 import { resolveProductionDuration } from "./production-zone-catalog";
 
 export function resolveProductionClaim(
-  exploration: ActiveExploration
+  exploration: ActiveExploration,
+  claimedAt?: string,
+  createItemInstanceId?: () => ItemInstanceId
 ): ExplorationResolution | null {
   const duration = resolveProductionDuration(
     exploration.zoneId,
@@ -28,6 +33,7 @@ export function resolveProductionClaim(
     return null;
   }
 
+  const generatedDrops = resolveProductionGeneratedDrops(exploration) ?? [];
   const resolved = resolveSeededExpedition({
     seed: exploration.seed,
     explorationId: exploration.explorationId,
@@ -38,7 +44,7 @@ export function resolveProductionClaim(
       lossPolicy: INITIAL_PRODUCTION_LOSS_POLICY,
       generatedGold: row.economy.grossReward,
       generatedExp: row.lossExpectation.generatedExp,
-      generatedDrops: []
+      generatedDrops
     }
   });
 
@@ -46,12 +52,22 @@ export function resolveProductionClaim(
     0,
     resolved.rewards.retainedGold - row.economy.finalGoldRequirement
   );
+  const retainedDrops =
+    claimedAt !== undefined && createItemInstanceId !== undefined
+      ? resolved.rewards.retainedDrops.map((generatedDrop) =>
+          instantiateDrop({
+            generatedDrop,
+            itemInstanceId: createItemInstanceId(),
+            createdAt: claimedAt
+          })
+        )
+      : [];
 
   return {
     result: resolved.result,
     gold: retainedGoldAfterFixedCost,
     exp: resolved.rewards.retainedExp,
-    drops: [],
+    drops: retainedDrops,
     summaryMetrics: {
       ...resolved.summaryMetrics,
       failureProbability: row.riskFailure.failureProbability,
@@ -60,7 +76,9 @@ export function resolveProductionClaim(
       generatedExp: row.lossExpectation.generatedExp,
       retainedGoldBeforeFixedCost: resolved.rewards.retainedGold,
       retainedGoldAfterFixedCost,
-      retainedExp: resolved.rewards.retainedExp
+      retainedExp: resolved.rewards.retainedExp,
+      generatedDropCount: generatedDrops.length,
+      retainedDropCount: resolved.rewards.retainedDrops.length
     }
   };
 }
