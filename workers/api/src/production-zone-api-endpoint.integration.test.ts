@@ -50,21 +50,50 @@ describe("production zone API endpoint", () => {
     );
 
     expect(zones.status).toBe(200);
-    await expect(zones.json()).resolves.toMatchObject({
-      ok: true,
-      zones: [
-        {
-          zoneId: "wayfarer-meadow",
-          minimumZoneRank: 0,
-          unlocked: true
-        },
-        {
-          zoneId: "mossglass-grove",
-          minimumZoneRank: 1,
-          unlocked: false
-        }
-      ]
-    });
+    const zonesBody = (await zones.json()) as {
+      readonly ok: true;
+      readonly zones: readonly {
+        readonly zoneId: string;
+        readonly minimumZoneRank: number;
+        readonly unlocked: boolean;
+        readonly durations: readonly unknown[];
+      }[];
+    };
+
+    expect(zonesBody.ok).toBe(true);
+    expect(zonesBody.zones).toHaveLength(5);
+    expect(zonesBody.zones.map(({ zoneId, minimumZoneRank, unlocked }) => ({
+      zoneId,
+      minimumZoneRank,
+      unlocked
+    }))).toEqual([
+      {
+        zoneId: "wayfarer-meadow",
+        minimumZoneRank: 0,
+        unlocked: true
+      },
+      {
+        zoneId: "mossglass-grove",
+        minimumZoneRank: 1,
+        unlocked: false
+      },
+      {
+        zoneId: "shattered-causeway",
+        minimumZoneRank: 2,
+        unlocked: false
+      },
+      {
+        zoneId: "ashwind-highlands",
+        minimumZoneRank: 3,
+        unlocked: false
+      },
+      {
+        zoneId: "starfall-frontier",
+        minimumZoneRank: 4,
+        unlocked: false
+      }
+    ]);
+    expect(zonesBody.zones[0]?.durations).toHaveLength(3);
   });
 
   it("preserves missing-player and unknown-player errors", async () => {
