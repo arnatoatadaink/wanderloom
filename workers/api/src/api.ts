@@ -96,7 +96,11 @@ const defaultRuntime: ApiRuntime = {
   createItemInstanceId: () => crypto.randomUUID() as ItemInstanceId,
   resolveDurationMs: resolveM2SmokeDurationMs,
   resolveExploration: (exploration, claimedAt, createItemInstanceId) => {
-    const productionResolution = resolveProductionClaim(exploration);
+    const productionResolution = resolveProductionClaim(
+      exploration,
+      claimedAt,
+      createItemInstanceId
+    );
     if (productionResolution !== null) {
       return productionResolution;
     }
