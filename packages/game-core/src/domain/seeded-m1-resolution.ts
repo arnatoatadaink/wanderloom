@@ -21,6 +21,9 @@ export interface SeededM1Resolution {
 export interface SeededExpeditionResolutionConfig {
   readonly failureProbability: number;
   readonly lossPolicy: LossPolicy;
+  readonly generatedGold?: number;
+  readonly generatedExp?: number;
+  readonly generatedDrops?: readonly GeneratedDrop[];
 }
 
 export interface SeededExpeditionResolutionInput extends SeededM1ResolutionInput {
@@ -60,6 +63,12 @@ function assertProbability(value: number): void {
   }
 }
 
+function assertNonNegativeReward(value: number, name: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`${name} must be a finite non-negative number`);
+  }
+}
+
 export function resolveSeededM1Exploration(
   input: SeededM1ResolutionInput
 ): SeededM1Resolution {
@@ -78,11 +87,13 @@ export function resolveSeededExpedition(
 ): SeededExpeditionResolution {
   assertProbability(input.config.failureProbability);
   const resolutionHash = hashResolutionInput(input);
-  const generatedGold = 5 + (resolutionHash % 2);
-  const generatedExp = 10;
-  const generatedDrops: readonly GeneratedDrop[] = [
+  const generatedGold = input.config.generatedGold ?? 5 + (resolutionHash % 2);
+  const generatedExp = input.config.generatedExp ?? 10;
+  const generatedDrops = input.config.generatedDrops ?? [
     { itemDefinitionId: M1_WAYFARER_CHARM_ITEM_DEFINITION_ID }
   ];
+  assertNonNegativeReward(generatedGold, "generatedGold");
+  assertNonNegativeReward(generatedExp, "generatedExp");
   const roll = resolutionHash / 0x100000000;
   const result: ExpeditionOutcome =
     roll < input.config.failureProbability ? "failure" : "success";
