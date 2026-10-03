@@ -1,4 +1,5 @@
 import {
+  INITIAL_PRODUCTION_PROGRESSION_RULE,
   calculateClaim,
   equipItem,
   instantiateDrop,
@@ -31,6 +32,7 @@ import {
   resolveM2SmokeDurationMs,
   resolveM2SmokeRewardConfiguration
 } from "./m1-smoke-rules";
+import { resolveProductionClaim } from "./production-claim-resolution";
 import { persistStartedExploration } from "./services/start-exploration-persistence";
 import { linkGoogleAccount } from "./services/link-google-account";
 import { GoogleJwksIdTokenVerifier, GoogleOidcVerificationError, type GoogleIdTokenVerifier } from "./google-oidc";
@@ -74,6 +76,9 @@ export interface ApiRuntime {
     claimedAt: string,
     createItemInstanceId: () => ItemInstanceId
   ) => ExplorationResolution | null;
+  readonly resolveProgressionRule?: (
+    exploration: ActiveExploration
+  ) => ProgressionRule | undefined;
   readonly recentArchiveRetention: number | null;
   readonly progressionRule?: ProgressionRule;
   readonly rewardConfiguration?: ZoneRewardConfiguration;
@@ -91,6 +96,11 @@ const defaultRuntime: ApiRuntime = {
   createItemInstanceId: () => crypto.randomUUID() as ItemInstanceId,
   resolveDurationMs: resolveM2SmokeDurationMs,
   resolveExploration: (exploration, claimedAt, createItemInstanceId) => {
+    const productionResolution = resolveProductionClaim(exploration);
+    if (productionResolution !== null) {
+      return productionResolution;
+    }
+
     const resolved = resolveSeededExpedition({
       seed: exploration.seed,
       explorationId: exploration.explorationId,
@@ -136,6 +146,10 @@ const defaultRuntime: ApiRuntime = {
       }
     };
   },
+  resolveProgressionRule: (exploration) =>
+    resolveProductionClaim(exploration) !== null
+      ? INITIAL_PRODUCTION_PROGRESSION_RULE
+      : M2_SMOKE_PROGRESSION_RULE,
   recentArchiveRetention: M1_SMOKE_RECENT_ARCHIVE_RETENTION,
   progressionRule: M2_SMOKE_PROGRESSION_RULE,
   rewardConfiguration: M2_SMOKE_REWARD_CONFIGURATION,
@@ -652,14 +666,16 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
           return notReady("exploration_resolution");
         }
 
+        const progressionRule =
+          runtime.resolveProgressionRule?.(exploration) ?? runtime.progressionRule;
         const calculated = calculateClaim({
           core,
           inventory,
           exploration,
           resolution,
           claimedAt,
-          ...(runtime.progressionRule
-            ? { progressionRule: runtime.progressionRule }
+          ...(progressionRule
+            ? { progressionRule }
             : {})
         });
         if (!calculated.ok) {
