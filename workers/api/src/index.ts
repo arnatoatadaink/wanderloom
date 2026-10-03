@@ -1,6 +1,8 @@
 import type { PlayerId } from "@wanderloom/game-core";
 import { createApi, type ApiEnv } from "./api";
+import { D1CoreSnapshotRepository } from "./persistence/d1-core-snapshot-repository";
 import { D1GoogleDriveAuthorizationRepository } from "./persistence/d1-google-drive-authorization-repository";
+import { buildProductionZoneApiResponse } from "./production-zone-api-response";
 import { getGoogleDriveConnectionStatus } from "./services/get-google-drive-connection-status";
 import { syncGoogleDriveArchive } from "./services/sync-google-drive-archive";
 
@@ -16,6 +18,19 @@ function missingPlayerResponse(): Response {
       }
     },
     { status: 400 }
+  );
+}
+
+function playerNotFoundResponse(): Response {
+  return Response.json(
+    {
+      ok: false,
+      error: {
+        code: "player_not_found",
+        retryable: false
+      }
+    },
+    { status: 404 }
   );
 }
 
@@ -42,6 +57,22 @@ export default {
         ok: true,
         connection: status
       });
+    }
+
+    if (method === "GET" && url.pathname === "/api/zones") {
+      const playerIdHeader = request.headers.get("x-wanderloom-player-id");
+      if (!playerIdHeader) {
+        return missingPlayerResponse();
+      }
+
+      const core = await new D1CoreSnapshotRepository(env.DB).findByPlayerId(
+        playerIdHeader as PlayerId
+      );
+      if (core === null) {
+        return playerNotFoundResponse();
+      }
+
+      return Response.json(buildProductionZoneApiResponse(core));
     }
 
     if (method === "POST" && url.pathname === "/api/archive/sync") {
