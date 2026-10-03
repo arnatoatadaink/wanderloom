@@ -10,6 +10,12 @@ import { PersistenceController } from "./persistence-controller";
 import { PersistenceCoordinator } from "./persistence-coordinator";
 import { toPersistenceStatusView } from "./persistence-status-view";
 import {
+  buildProductionZoneCardViews,
+  canStartProductionZone,
+  reconcileProductionZoneSelection,
+  selectProductionZone
+} from "./production-zone-ui";
+import {
   chooseInitialSelection,
   deriveExplorationPhase,
   initialViewModel,
@@ -301,6 +307,10 @@ export class WanderloomApp {
   }
 
   private async startExploration(): Promise<void> {
+    if (!canStartProductionZone(this.state)) {
+      return;
+    }
+
     const zoneId = this.state.selectedZoneId;
     const durationId = this.state.selectedDurationId;
     if (zoneId === null || durationId === null) {
@@ -343,8 +353,11 @@ export class WanderloomApp {
       const result = await this.api.claimExploration(
         exploration.explorationId
       );
+      const zones = await this.api.getZones();
+      const reconciled = reconcileProductionZoneSelection(this.state, zones);
       this.state = {
         ...this.state,
+        ...reconciled,
         busy: false,
         phase: "result",
         core: result.core,
@@ -518,6 +531,7 @@ export class WanderloomApp {
     const duration = zone?.durations.find(
       (entry) => entry.durationId === this.state.selectedDurationId
     );
+    const zoneCards = buildProductionZoneCardViews(this.state);
     const persistenceView = toPersistenceStatusView(
       this.persistence.getState()
     );
@@ -529,16 +543,18 @@ export class WanderloomApp {
       </div>
 
       <div class="destination-list">
-        ${this.state.zones.map((entry) => `
+        ${zoneCards.map((entry) => `
           <button
-            class="destination-card ${entry.zoneId === this.state.selectedZoneId ? "selected" : ""}"
+            class="destination-card ${entry.selected ? "selected" : ""} ${entry.unlocked ? "" : "locked"}"
             data-zone-id="${escapeHtml(entry.zoneId)}"
             type="button"
+            ${entry.unlocked ? "" : "disabled"}
+            aria-disabled="${entry.unlocked ? "false" : "true"}"
           >
-            <span class="destination-mark">◇</span>
+            <span class="destination-mark">${entry.unlocked ? "◇" : "◇"}</span>
             <span>
               <strong>${escapeHtml(entry.name)}</strong>
-              <small>${escapeHtml(entry.zoneId)}</small>
+              <small>${escapeHtml(entry.zoneId)}${entry.requirementLabel ? ` · ${escapeHtml(entry.requirementLabel)}` : ""}${entry.unlocked ? "" : " · Locked"}</small>
             </span>
           </button>
         `).join("")}
@@ -595,7 +611,7 @@ export class WanderloomApp {
         id="start-expedition"
         class="primary-action"
         type="button"
-        ${this.state.busy || !duration ? "disabled" : ""}
+        ${this.state.busy || !duration || !canStartProductionZone(this.state) ? "disabled" : ""}
       >
         ${this.state.busy ? "Starting…" : "Start expedition"}
       </button>
@@ -683,7 +699,7 @@ export class WanderloomApp {
       ${this.renderInventory()}
 
       <p class="hint">
-        This result currently uses the provisional M1 smoke rules.
+        Production rules are resolved by the server and the next Zone unlocks from persisted progression.
       </p>
 
       <button id="explore-again" class="primary-action" type="button">
@@ -759,14 +775,14 @@ export class WanderloomApp {
     this.root.querySelectorAll<HTMLElement>("[data-zone-id]").forEach(
       (element) => {
         element.addEventListener("click", () => {
-          const zoneId = element.dataset.zoneId ?? null;
-          const zone = this.state.zones.find(
-            (entry) => entry.zoneId === zoneId
-          );
+          const zoneId = element.dataset.zoneId;
+          if (!zoneId) {
+            return;
+          }
+          const selected = selectProductionZone(this.state, zoneId);
           this.state = {
             ...this.state,
-            selectedZoneId: zoneId,
-            selectedDurationId: zone?.durations[0]?.durationId ?? null
+            ...selected
           };
           this.render();
         });
