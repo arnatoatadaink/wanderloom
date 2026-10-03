@@ -53,21 +53,20 @@ describe("production zone UI contract", () => {
       selectedDurationId: "short"
     });
 
-    expect(views).toMatchObject([
-      {
-        zoneId: "wayfarer-meadow",
-        unlocked: true,
-        requirementLabel: "Rank 0",
-        selected: true
-      },
-      {
-        zoneId: "mossglass-grove",
-        unlocked: false,
-        requirementLabel: "Rank 1",
-        selected: false
-      }
-    ]);
     expect(views).toHaveLength(5);
+    expect(views[0]).toMatchObject({
+      zoneId: "wayfarer-meadow",
+      unlocked: true,
+      requirementLabel: "Rank 0",
+      selected: true
+    });
+    expect(views[1]).toMatchObject({
+      zoneId: "mossglass-grove",
+      unlocked: false,
+      requirementLabel: "Rank 1",
+      selected: false
+    });
+    expect(views.slice(1).every((view) => view.unlocked === false)).toBe(true);
   });
 
   it("ignores attempts to select a locked zone", () => {
