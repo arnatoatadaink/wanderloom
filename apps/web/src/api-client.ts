@@ -31,6 +31,8 @@ export interface ZoneDto {
   readonly zoneId: string;
   readonly name: string;
   readonly durations: readonly ZoneDurationDto[];
+  readonly minimumZoneRank?: number;
+  readonly unlocked?: boolean;
 }
 
 export interface ActiveExplorationDto {
