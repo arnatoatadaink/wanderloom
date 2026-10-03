@@ -96,7 +96,11 @@ const defaultRuntime: ApiRuntime = {
   createItemInstanceId: () => crypto.randomUUID() as ItemInstanceId,
   resolveDurationMs: resolveM2SmokeDurationMs,
   resolveExploration: (exploration, claimedAt, createItemInstanceId) => {
-    const productionResolution = resolveProductionClaim(exploration);
+    const productionResolution = resolveProductionClaim(
+      exploration,
+      claimedAt,
+      createItemInstanceId
+    );
     if (productionResolution !== null) {
       return productionResolution;
     }
@@ -768,7 +772,7 @@ export function createApi(runtime: ApiRuntime = defaultRuntime) {
         return committed.ok
           ? json({
               ok: true,
-              inventory: equipped.value.nextInventory,
+              inventory: committed.value.nextInventory ?? equipped.value.nextInventory,
               idempotent: false
             })
           : mutationErrorResponse(committed.error);
